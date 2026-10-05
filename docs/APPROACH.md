@@ -1,50 +1,89 @@
 # Project Approach & Architecture — Build Secure 24
 
 **Team ID:** 29
-**Project Name:** Quadrax
+**Project Name:** ShipTrack (PS-05) — Delivery & Shipment Management
 **Team Size:** 4 Members
-**Primary Track / Domain:** 
+**Primary Track / Domain:** Logistics & Supply Chain Cybersecurity / Secure Web Engineering
 
 ---
 
 ## 1. Problem Understanding, Scope & Threat Model
 
 ### 1.1 Problem Statement & Real-World Motivation
-*Describe the specific problem your project solves, why it matters, and the core security challenges involved.*
+Logistics and shipment tracking systems operate across distributed actors (customers, couriers, administrators) handling sensitive personal identifiable information (PII) and physical goods. Common vulnerabilities in logistics platforms include:
+- **Broken Object-Level Authorization (BOLA / IDOR):** Unauthenticated or unauthorized users accessing details of packages they do not own.
+- **SQL Injection (SQLi):** Malicious inputs in search or tracking fields compromising the backend database.
+- **Privilege Escalation:** Delivery personnel or regular customers modifying shipment assignments or accessing administrative functions.
+- **Data Tampering:** Unauthorized modification of shipment tracking stages and status logs.
+
+ShipTrack addresses these challenges with strict defense-in-depth security: 100% parameterized SQL queries, mandatory role-based access control (RBAC), object-level ownership verification on every shipment endpoint, and secure cryptographic password hashing.
 
 ### 1.2 Target Users & Personas
-*Identify target user groups, their operational workflows, and their trust levels (e.g. End User, Admin, Auditor).*
+- **Customer:** Registers account, creates new shipment requests, tracks shipments via tracking number, and views personal shipment history.
+- **Delivery Person:** Accesses a dedicated courier portal, views assigned parcels, and logs validated delivery status milestones (`Picked Up`, `In Transit`, `Out for Delivery`, `Delivered`).
+- **Administrator:** Manages system users, assigns unassigned shipments to delivery personnel, cancels problematic shipments, and oversees platform health.
 
 ### 1.3 Threat Model & Attack Surface
-*Document the threat landscape for this system:*
-- **Critical Assets:** (e.g., user credentials, PII, sensitive business records, session tokens)
-- **Potential Attack Vectors:** (e.g., credential stuffing, injection attacks, privilege escalation, unauthorized API access)
-- **OWASP Top 10 Considerations:** (e.g., broken access control, cryptographic failures, injection prevention)
+- **Critical Assets:** User credentials (passwords, sessions), Customer PII (sender/recipient addresses, phone numbers), Shipment tracking lifecycle, Delivery audit logs.
+- **Potential Attack Vectors:**
+  - SQL Injection via tracking search bars or filter query parameters.
+  - BOLA / IDOR via guessing or iterating sequential shipment IDs.
+  - Role bypass or session manipulation to access admin or delivery functions.
+  - Cross-Site Scripting (XSS) via package descriptions or delivery notes.
+- **OWASP Top 10 Considerations:**
+  - **A01: Broken Access Control:** Enforce server-side role checks and ownership validations (`customer_id == session.user_id`) on all requests.
+  - **A02: Cryptographic Failures:** Passwords hashed with salted PBKDF2/scrypt via `werkzeug.security`.
+  - **A03: Injection:** Zero string concatenation in database operations; 100% parameterized queries.
+  - **A07: Identification and Authentication Failures:** Secure session cookies, password complexity, and timing-safe hash comparison.
 
 ---
 
 ## 2. Technical Architecture & Secure System Design
 
 ### 2.1 High-Level Architecture Overview
-*Describe the multi-tier system structure (Client / API Gateway / Domain Services / Data Persistence).*
+ShipTrack adopts a clean two-tier decoupled architecture:
+```
+┌────────────────────────────────────────────────────────┐
+│               Frontend Presentation Layer              │
+│       src/frontend/ (Hand-written HTML/CSS/JS)         │
+│          Bootstrap 5 CDN + Responsive UI               │
+└───────────────────────────▲────────────────────────────┘
+                            │ REST / JSON (Fetch API)
+┌───────────────────────────▼────────────────────────────┐
+│                  Backend Service Layer                 │
+│               src/backend/ (Python Flask)              │
+│   ├── Auth & Session Management (werkzeug.security)    │
+│   ├── RBAC & Ownership Verification Middleware         │
+│   └── Parameterized SQL Query Engine (db.py)           │
+└───────────────────────────▲────────────────────────────┘
+                            │ Parameterized queries (sqlite3)
+┌───────────────────────────▼────────────────────────────┐
+│                 Data Persistence Layer                 │
+│         SQLite with Foreign Keys Enforced (PRAGMA)     │
+│   ├── users (customer, delivery_person, admin)         │
+│   ├── shipments (tracking, sender, recipient, status)  │
+│   └── status_updates (audit log & delivery timeline)   │
+└────────────────────────────────────────────────────────┘
+```
 
 ### 2.2 Data Flow & Component Interaction
-*Outline how requests traverse the system from ingress to storage and back, highlighting trust boundaries.*
+1. **User Authentication:** User submits credentials -> Flask hashes & checks via `werkzeug.security` -> Secure session established with role tag.
+2. **Shipment Ingress:** Customer submits shipment form -> Flask validates input fields -> Parameterized `INSERT` creates shipment with unique tracking code.
+3. **Tracking & Ownership:** Customer requests shipment details -> Server validates `customer_id == current_user.id` (or user is admin/assigned courier) -> Returns filtered record.
+4. **Delivery Update:** Delivery courier submits status change -> Server verifies role and courier assignment -> Parameterized `UPDATE` modifies shipment and creates audit record in `status_updates`.
 
 ### 2.3 Technology Stack Rationale
-*Explain the tools selected and why alternatives were rejected:*
-- **Backend / API Framework:** (e.g., FastAPI, Express, Go Gin) — *Why chosen:*
-- **Frontend / Client:** (e.g., React, Next.js, HTML/JS) — *Why chosen:*
-- **Database & Persistence:** (e.g., PostgreSQL, SQLite, Redis) — *Why chosen:*
-- **Authentication & Cryptography:** (e.g., Bcrypt/Argon2, PyJWT) — *Why chosen:*
+- **Backend Framework:** Python Flask — lightweight, flexible, and allows fine-grained security control over every route and middleware layer.
+- **Frontend / Client:** Hand-written HTML/CSS/JS with Bootstrap 5 CDN — fast, zero-dependency build pipeline, responsive, and easy to audit for security.
+- **Database:** SQLite with `PRAGMA foreign_keys = ON;` — self-contained, transactional, zero network exposure, ideal for hackathon agility with full ACID compliance.
+- **Cryptography:** `werkzeug.security` (`generate_password_hash`, `check_password_hash`) — robust, salted, collision-resistant password storage.
 
 ### 2.4 Defense-in-Depth Security Controls
-*Detail the specific security controls implemented:*
-1. **Authentication & Session Security:** (e.g., salted password hashing, short-lived signed tokens)
-2. **Authorization & Access Control:** (e.g., role-based access control, object-level permission checks)
-3. **Input Validation & Sanitization:** (e.g., strict schema validation, query parameterization to prevent SQLi)
-4. **Rate Limiting & Abuse Prevention:** (e.g., IP/token bucket throttling on public endpoints)
-5. **Secrets & Configuration Hygiene:** (e.g., zero hardcoded credentials, 100% environment variable isolation)
+1. **100% Parameterized SQL:** All SQL operations use parameter placeholders (`?`). String formatting/f-strings in SQL are strictly prohibited.
+2. **Role-Based Access Control (RBAC):** Decorators on every route enforce required roles (`customer`, `delivery_person`, `admin`).
+3. **Object-Level Authorization:** Users can only view or manipulate shipments they own or are assigned to.
+4. **Input Sanitization & Output Escaping:** All user-supplied inputs (descriptions, notes, addresses) are validated and escaped before display.
+5. **Audit Trail Logging:** All delivery status transitions are recorded in `status_updates` with updater ID, location, notes, and timestamps.
 
 ---
 
@@ -52,56 +91,52 @@
 
 | Milestone / Phase | Time Window | Key Objectives & Deliverables | Security Verification | Status |
 |---|---|---|---|---|
-| **Phase 1: Foundation & Setup** | 0h – 4h | Contract onboarding, repo setup, baseline data schemas | Secret scan & baseline check | `Planned` |
-| **Phase 2: Core Domain & Auth** | 4h – 12h | Core business logic, secure authentication & authorization | Auth test suite & crypto validation | `Planned` |
-| **Phase 3: Security & Hardening**| 12h – 18h | Input validation, rate limiting, error handling, security middleware | SAST scanning & edge case tests | `Planned` |
-| **Phase 4: Polish & Deployment**| 18h – 24h | UI polish, live cloud deployment, final docs & commit freeze | Live deployment URL check | `Planned` |
+| **Phase 1: Foundation & Setup** | 0h – 4h | Onboarding, repo structure, SQLite schema (`users`, `shipments`, `status_updates`), `requirements.txt` | Schema constraint test & foreign key validation | `Completed` |
+| **Phase 2: Core Domain & Auth** | 4h – 10h | User registration/login (`werkzeug.security`), session auth, role decorators | Auth test suite & password hash verification | `Planned` |
+| **Phase 3: Shipment Workflows** | 10h – 16h | Shipment creation, tracking lookup, courier dashboard, status update logging | BOLA/IDOR test & role boundary check | `Planned` |
+| **Phase 4: Admin & UI Integration**| 16h – 20h | Admin management dashboard, frontend integration with Bootstrap CDN | Input escaping & cross-role access check | `Planned` |
+| **Phase 5: Polish & Deployment**| 20h – 24h | End-to-end testing, live deployment, submission commit freeze | SAST scan & live health check | `Planned` |
 
 ---
 
 ## 4. Architecture Decision Records (ADRs)
 
-### ADR-001: [Title of First Major Decision]
-- **Status:** [Proposed | Accepted | Superseded]
-- **Context:** *What was the architectural context, problem, or requirement?*
-- **Options Considered:** 
-  1. *Option A (e.g., choice 1)*
-  2. *Option B (e.g., choice 2)*
-- **Decision & Rationale:** *What was decided and why was it chosen over alternatives?*
-- **Security & Performance Trade-offs:** *What are the security implications or performance impacts?*
-
-### ADR-002: [Title of Second Major Decision]
-- **Status:** [Proposed | Accepted | Superseded]
-- **Context:**
+### ADR-001: SQLite Database Engine with Parameterized SQL Helper
+- **Status:** Accepted
+- **Context:** ShipTrack requires reliable transactional storage without complex database servers, while strictly preventing SQL injection.
 - **Options Considered:**
-- **Decision & Rationale:**
-- **Security & Performance Trade-offs:**
+  1. Full ORM (SQLAlchemy)
+  2. Raw SQLite with custom parameterized helpers (`query_db`, `execute_db`)
+- **Decision & Rationale:** Chose raw SQLite with explicit parameterized helper functions. This ensures complete transparency over every query, guarantees zero ORM abstraction leakage, and enforces `PRAGMA foreign_keys = ON;`.
+- **Security & Performance Trade-offs:** Zero external database attack surface, instantaneous setup, microsecond query speeds, and verifiable parameterization across all queries.
+
+### ADR-002: werkzeug.security Salted Password Hashing
+- **Status:** Accepted
+- **Context:** User passwords must never be stored in plaintext or with reversible algorithms.
+- **Options Considered:**
+  1. Plain SHA256 / MD5 (Insecure, vulnerable to rainbow tables)
+  2. `werkzeug.security` (`scrypt` / `pbkdf2:sha256`)
+- **Decision & Rationale:** `werkzeug.security` is bundled with Flask, implements industry-standard salted hashing, and provides timing-attack resistant verification (`check_password_hash`).
+- **Security & Performance Trade-offs:** Excellent resistance against offline brute-force and rainbow table attacks.
 
 ---
 
 ## 5. Engineering Journal & Real-Time Decision Log
 
-*Maintain this chronological log as your team builds during the 24-hour hackathon.*
-
-### [YYYY-MM-DD HH:MM IST] Entry 1: Project Initialization & Scope Lock
-- **Focus:** Initial repository setup, team alignment, and schema architecture.
-- **Key Challenges:** 
-- **Resolution:** 
-
-### [YYYY-MM-DD HH:MM IST] Entry 2: Implementation Milestone Progress
-- **Focus:** 
-- **Key Challenges:** 
-- **Resolution:** 
+### 2026-10-05 13:15 IST — Entry 1: Problem Scope Lock & Baseline Scaffold
+- **Focus:** Initialized PS-05 ShipTrack project architecture. Created SQLite schema defining `users`, `shipments`, and `status_updates` tables with comprehensive indexes and foreign keys.
+- **Key Challenges:** Ensuring foreign key constraints are honored in SQLite (SQLite disables them by default).
+- **Resolution:** Explicitly configured `PRAGMA foreign_keys = ON;` in `schema.sql` and `db.py` connection factory.
 
 ---
 
 ## 6. Testing, Security Verification & Deployment Record
 
 ### 6.1 Testing & Security Verification Strategy
-- **Unit & Integration Tests:** (Describe test coverage in `src/`)
-- **Static Analysis & Linting:** (Lint and security checks run)
+- **Unit & Schema Verification:** Schema parsed and validated in SQLite in-memory runner; all foreign keys, indexes, and constraints verified.
+- **Security Check:** Zero hardcoded secrets; `.env.example` created and `.gitignore` updated to prevent committing database or credential files.
 
 ### 6.2 Deployment Verification
-- **Live Deployment Platform:** (e.g., Vercel, Render, Railway, AWS)
-- **Deployment URL:** (Recorded in `metadata/submission.yaml` and `deployment/README.md`)
-- **Health Check Endpoint:** (e.g., `/health` or `/api/health`)
+- **Target Platform:** Cloud Deployment (e.g. Render / Railway / PythonAnywhere)
+- **Deployment URL:** *Pending deployment phase*
+- **Health Check Endpoint:** `/api/health`

@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv/
+
+# Environment and Secrets
+.env
+.env.local
+*.secret
+
+# SQLite Databases
+*.sqlite
+*.sqlite3
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+src/backend/*.db
+
+# IDE and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
