@@ -4,7 +4,7 @@
 # - If your team has 4 members: provide all 4 members.
 
 team:
-  team_id: ""
+  team_id: "29"
   name: ""
   repository: "" # URL of the newly created GitHub repository for this project
 
