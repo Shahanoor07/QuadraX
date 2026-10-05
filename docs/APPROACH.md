@@ -93,8 +93,8 @@ ShipTrack adopts a clean two-tier decoupled architecture:
 |---|---|---|---|---|
 | **Phase 1: Foundation & Setup** | 0h – 4h | Onboarding, repo structure, SQLite schema (`users`, `shipments`, `status_updates`), `requirements.txt` | Schema constraint test & foreign key validation | `Completed` |
 | **Phase 2: Core Domain & Auth** | 4h – 10h | User registration/login (`werkzeug.security`), session auth, role decorators, seeding script | Auth test suite, rate limit check & password hash verification | `Completed` |
-| **Phase 3: Shipment Workflows** | 10h – 16h | Customer shipment creation, tracking lookup, courier dashboard, status update logging | BOLA/IDOR test, anti-probing 404 checks & ownership verification | `In Progress` |
-| **Phase 4: Admin & UI Integration**| 16h – 20h | Admin management dashboard, frontend integration with Bootstrap CDN | Input escaping & cross-role access check | `Planned` |
+| **Phase 3: Shipment Workflows** | 10h – 16h | Customer shipment creation, tracking lookup, courier dashboard, status update logging | BOLA/IDOR test, anti-probing 404 checks & ownership verification | `Completed` |
+| **Phase 4: Admin & UI Integration**| 16h – 20h | Admin management dashboard, shipment assignment, user management, frontend UI integration | Input escaping, cross-role access check & courier assignment audit | `In Progress` |
 | **Phase 5: Polish & Deployment**| 20h – 24h | End-to-end testing, live deployment, submission commit freeze | SAST scan & live health check | `Planned` |
 
 ---
@@ -179,6 +179,11 @@ ShipTrack adopts a clean two-tier decoupled architecture:
 - **Key Challenges:** Guaranteeing that direct database mutation is immediately detected upon audit.
 - **Resolution:** Validated tamper detection in `tests/test_security_foundation.py` by mutating database rows and verifying that `/api/shipments/<id>/verify` flags `valid: false` with the exact tampered record metadata.
 
+### 2026-10-05 15:15 IST — Entry 5: Delivery & Admin Role Operations Completed
+- **Focus:** Implemented complete delivery person module (`src/backend/delivery.py`) with courier dashboard, assigned tasks, and milestone progression (`Picked Up` -> `In Transit` -> `Out for Delivery` -> `Delivered`) chained into cryptographic custody ledger. Implemented admin management module (`src/backend/admin.py`) with system metrics, all shipments listing, courier assignment (`/api/admin/shipments/<id>/assign`), and user management.
+- **Key Challenges:** Ensuring couriers cannot tamper with unassigned shipments or modify packages once marked Delivered.
+- **Resolution:** Enforced BOLA assignment check (`assigned_delivery_id == session["user_id"]`), terminal status freeze on Delivered shipments, and verified all 7 automated test suites passing.
+
 ---
 
 ## 6. Testing, Security Verification & Deployment Record
@@ -187,6 +192,7 @@ ShipTrack adopts a clean two-tier decoupled architecture:
 - **Unit & Security Test Suite:** 100% passing automated test suite (`python -m pytest tests/`):
   - Customer shipment isolation, input validation, and BOLA prevention (`tests/test_customer_shipments.py`)
   - Cryptographic chain of custody, database tampering detection, security event logging, and admin telemetry (`tests/test_security_foundation.py`)
+  - Delivery person lifecycle transitions, terminal state protection, courier assignment, and admin operations (`tests/test_delivery_and_admin.py`)
 - **Security Check:** Zero hardcoded credentials, parameterized queries on all endpoints, anti-enumeration generic auth responses, rate limit lockouts, and HttpOnly/SameSite cookies.
 
 ### 6.2 Deployment Verification
