@@ -93,7 +93,7 @@ ShipTrack adopts a clean two-tier decoupled architecture:
 |---|---|---|---|---|
 | **Phase 1: Foundation & Setup** | 0h – 4h | Onboarding, repo structure, SQLite schema (`users`, `shipments`, `status_updates`), `requirements.txt` | Schema constraint test & foreign key validation | `Completed` |
 | **Phase 2: Core Domain & Auth** | 4h – 10h | User registration/login (`werkzeug.security`), session auth, role decorators, seeding script | Auth test suite, rate limit check & password hash verification | `Completed` |
-| **Phase 3: Shipment Workflows** | 10h – 16h | Shipment creation, tracking lookup, courier dashboard, status update logging | BOLA/IDOR test & role boundary check | `Planned` |
+| **Phase 3: Shipment Workflows** | 10h – 16h | Customer shipment creation, tracking lookup, courier dashboard, status update logging | BOLA/IDOR test, anti-probing 404 checks & ownership verification | `In Progress` |
 | **Phase 4: Admin & UI Integration**| 16h – 20h | Admin management dashboard, frontend integration with Bootstrap CDN | Input escaping & cross-role access check | `Planned` |
 | **Phase 5: Polish & Deployment**| 20h – 24h | End-to-end testing, live deployment, submission commit freeze | SAST scan & live health check | `Planned` |
 
@@ -128,6 +128,15 @@ ShipTrack adopts a clean two-tier decoupled architecture:
 - **Decision & Rationale:** Used identical generic error messages for all failed login attempts, preventing username harvesting. Enforced a lockout threshold of 5 failures per 5-minute window with a 15-minute cooldown.
 - **Security & Performance Trade-offs:** Drastically improves attack resistance with negligible overhead.
 
+### ADR-004: Anti-Probing (HTTP 404) Response Strategy for BOLA / IDOR Mitigation
+- **Status:** Accepted
+- **Context:** If unauthorized requests to access another customer's shipment return HTTP 403 Forbidden, attackers can enumerate existing valid tracking numbers and IDs by distinguishing between 404 (non-existent) and 403 (exists, but belongs to someone else).
+- **Options Considered:**
+  1. Return HTTP 403 Forbidden on foreign shipments (Leads to object enumeration / ID probing)
+  2. Return HTTP 404 Not Found on unauthorized foreign shipments
+- **Decision & Rationale:** Return HTTP 404 whenever a customer or unassigned courier attempts to access or cancel a shipment they do not own. This completely obscures the existence of shipments belonging to other users.
+- **Security & Performance Trade-offs:** Eliminates tracking ID enumeration vulnerabilities at zero runtime cost.
+
 ---
 
 ## 5. Engineering Journal & Real-Time Decision Log
@@ -141,6 +150,11 @@ ShipTrack adopts a clean two-tier decoupled architecture:
 - **Focus:** Implemented customer registration with enforced role restriction, login, session management, logout, and `/api/auth/me`. Implemented `login_required` and `role_required` decorators. Created test seeding script (`seed.py`) with zero hardcoded passwords.
 - **Key Challenges:** Ensuring cookies are tamper-proof and resilient against client-side script hijacking while allowing standard browsers to handle CSRF.
 - **Resolution:** Configured `HttpOnly=True` and `SameSite=Lax` on Flask session cookies with environment-derived `SECRET_KEY`. Verified via unit tests with 100% pass rate.
+
+### 2026-10-05 14:10 IST — Entry 3: Customer Shipment Workflows & Anti-Probing Defenses
+- **Focus:** Implemented customer shipment creation (`POST /api/shipments`), customer history (`GET /api/shipments`), detail tracking (`GET /api/shipments/<tracking_number>`), and order cancellation (`POST /api/shipments/<id>/cancel`).
+- **Key Challenges:** Preventing ID probing and BOLA attacks when users query tracking numbers or IDs.
+- **Resolution:** Implemented server-side tracking number generation (`ST-YYYYMMDD-XXXXXX`), forced `customer_id` from session, and enforced HTTP 404 on foreign shipment accesses. Wrote automated pytest suite in `tests/test_customer_shipments.py`.
 
 ---
 

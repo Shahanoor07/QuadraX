@@ -18,17 +18,14 @@ def get_db():
     Uses Flask's application context `g` if active, otherwise returns a standalone connection.
     """
     if not has_app_context():
-        conn = sqlite3.connect(DEFAULT_DB_PATH, detect_types=sqlite3.PARSE_DECLTYPES)
+        conn = sqlite3.connect(DEFAULT_DB_PATH)
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA foreign_keys = ON;")
         return conn
 
     db_path = current_app.config.get("DATABASE", DEFAULT_DB_PATH)
     if "db" not in g:
-        g.db = sqlite3.connect(
-            db_path,
-            detect_types=sqlite3.PARSE_DECLTYPES
-        )
+        g.db = sqlite3.connect(db_path)
         g.db.row_factory = sqlite3.Row
         g.db.execute("PRAGMA foreign_keys = ON;")
 
