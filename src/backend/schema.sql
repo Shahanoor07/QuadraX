@@ -55,7 +55,7 @@ CREATE INDEX IF NOT EXISTS idx_shipments_assigned ON shipments(assigned_delivery
 CREATE INDEX IF NOT EXISTS idx_shipments_status ON shipments(current_status);
 
 -- 3. Status Updates Table
--- Audit trail and tracking timeline for each shipment update
+-- Cryptographic Chain of Custody: tamper-evident ledger using SHA-256 hash chaining
 CREATE TABLE IF NOT EXISTS status_updates (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     shipment_id INTEGER NOT NULL,
@@ -73,9 +73,29 @@ CREATE TABLE IF NOT EXISTS status_updates (
     location TEXT NOT NULL,
     notes TEXT,
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    prev_hash TEXT NOT NULL,
+    record_hash TEXT NOT NULL,
     FOREIGN KEY (shipment_id) REFERENCES shipments(id) ON DELETE CASCADE,
     FOREIGN KEY (updated_by_id) REFERENCES users(id) ON DELETE RESTRICT
 );
 
 CREATE INDEX IF NOT EXISTS idx_updates_shipment ON status_updates(shipment_id);
 CREATE INDEX IF NOT EXISTS idx_updates_timestamp ON status_updates(timestamp);
+CREATE INDEX IF NOT EXISTS idx_updates_record_hash ON status_updates(record_hash);
+
+-- 4. Security Events Table
+-- Attack detection and audit logging
+CREATE TABLE IF NOT EXISTS security_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    event_type TEXT NOT NULL,
+    user_id INTEGER,
+    ip TEXT NOT NULL,
+    path TEXT NOT NULL,
+    details TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_security_events_type ON security_events(event_type);
+CREATE INDEX IF NOT EXISTS idx_security_events_created ON security_events(created_at);
+CREATE INDEX IF NOT EXISTS idx_security_events_user ON security_events(user_id);

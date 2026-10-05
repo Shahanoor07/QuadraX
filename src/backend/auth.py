@@ -6,6 +6,7 @@ Features:
 - Session-based auth with secure cookies (HttpOnly, SameSite=Lax).
 - Generic error messaging on failed authentication to prevent username/email enumeration.
 - Login attempt throttling and lockout to prevent brute-force attacks.
+- Intrusion telemetry sensors logging failed logins, lockouts, and 401/403 events.
 - login_required and role_required(*roles) decorators.
 - 100% Parameterized SQL queries.
 """
@@ -19,8 +20,10 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 try:
     from .db import query_db, execute_db
+    from .security import log_security_event, check_and_log_suspicious_input
 except (ImportError, ValueError):
     from db import query_db, execute_db
+    from security import log_security_event, check_and_log_suspicious_input
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/api/auth")
 
@@ -74,6 +77,10 @@ def login_required(view):
     @functools.wraps(view)
     def wrapped_view(**kwargs):
         if "user_id" not in session:
+            log_security_event(
+                "UNAUTHORIZED_ACCESS",
+                f"Unauthenticated request to {request.path} (HTTP 401)"
+            )
             return jsonify({"error": "Authentication required. Please log in."}), 401
         return view(**kwargs)
     return wrapped_view
@@ -85,9 +92,17 @@ def role_required(*allowed_roles):
         @functools.wraps(view)
         def wrapped_view(**kwargs):
             if "user_id" not in session:
+                log_security_event(
+                    "UNAUTHORIZED_ACCESS",
+                    f"Unauthenticated request to {request.path} (HTTP 401)"
+                )
                 return jsonify({"error": "Authentication required. Please log in."}), 401
             current_role = session.get("role")
             if current_role not in allowed_roles:
+                log_security_event(
+                    "FORBIDDEN_ACCESS",
+                    f"User {session.get('user_id')} with role '{current_role}' denied access to {request.path} (required: {list(allowed_roles)}) (HTTP 403)"
+                )
                 return jsonify({
                     "error": "Access forbidden: insufficient role permissions.",
                     "required_roles": list(allowed_roles),
@@ -113,6 +128,9 @@ def register():
     - Parameterized SQL prevents SQL injection.
     """
     data = request.get_json(silent=True) or {}
+
+    # Passive intrusion sensor: scan for suspicious inputs
+    check_and_log_suspicious_input(data)
 
     username = str(data.get("username", "")).strip()
     email = str(data.get("email", "")).strip().lower()
@@ -181,18 +199,26 @@ def login():
     Security Rules:
     - Rate-limiting lockout on excessive failed login attempts.
     - Generic error message to prevent account enumeration.
+    - Telemetry logging on failed logins and lockout states.
     - Timing-safe password verification via check_password_hash.
     - HttpOnly and SameSite cookie configuration.
     """
     client_ip = _get_client_ip()
+    data = request.get_json(silent=True) or {}
+
+    # Passive intrusion sensor: scan for suspicious inputs
+    check_and_log_suspicious_input(data)
 
     # Check rate limiting / lockout
     if _is_locked_out(client_ip):
+        log_security_event(
+            "ACCOUNT_LOCKOUT",
+            f"Blocked login request from locked-out IP {client_ip} (HTTP 429)"
+        )
         return jsonify({
             "error": "Too many failed login attempts. Account temporarily locked for 15 minutes."
         }), 429
 
-    data = request.get_json(silent=True) or {}
     identifier = str(data.get("identifier") or data.get("username") or data.get("email") or "").strip()
     password = str(data.get("password") or "")
 
@@ -201,6 +227,10 @@ def login():
 
     # Check identifier lockout
     if _is_locked_out(identifier.lower()):
+        log_security_event(
+            "ACCOUNT_LOCKOUT",
+            f"Blocked login request for locked-out identifier '{identifier}' (HTTP 429)"
+        )
         return jsonify({
             "error": "Too many failed login attempts. Account temporarily locked for 15 minutes."
         }), 429
@@ -218,6 +248,18 @@ def login():
     if user is None or not check_password_hash(user["password_hash"], password):
         _record_failed_attempt(client_ip)
         _record_failed_attempt(identifier.lower())
+
+        log_security_event(
+            "FAILED_LOGIN",
+            f"Failed login attempt for identifier '{identifier}'"
+        )
+
+        if _is_locked_out(client_ip) or _is_locked_out(identifier.lower()):
+            log_security_event(
+                "ACCOUNT_LOCKOUT",
+                f"Rate limit threshold exceeded; lockout engaged for identifier '{identifier}' and IP {client_ip}"
+            )
+
         # Generic error message to prevent enumeration
         return jsonify({
             "error": "Invalid credentials. Please verify your username/email and password."

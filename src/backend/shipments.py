@@ -6,11 +6,13 @@ Implements:
 - GET /api/shipments: List only the authenticated customer's own shipments (newest first).
 - GET /api/shipments/<tracking_number>: View shipment and tracking timeline with strict BOLA/ownership check.
 - POST /api/shipments/<id>/cancel: Cancel customer's own shipment (only allowed in 'Order Placed' status).
+- GET /api/shipments/<id>/verify: Recompute and audit cryptographic chain of custody (admin or owner only).
 
 Security:
 - 100% Parameterized SQL queries.
 - Strict input sanitization and length validation.
-- Server-side customer_id and tracking number generation.
+- Cryptographic SHA-256 chain of custody on all status updates.
+- Passive attack detection sensors logging unauthorized access and suspicious patterns.
 - Returns 404 (anti-probing) when unauthorized users try to access other users' shipments.
 """
 
@@ -22,9 +24,21 @@ from flask import Blueprint, request, jsonify, session
 try:
     from .db import query_db, execute_db
     from .auth import login_required, role_required
+    from .security import (
+        add_status_update,
+        verify_shipment_chain,
+        log_security_event,
+        check_and_log_suspicious_input,
+    )
 except (ImportError, ValueError):
     from db import query_db, execute_db
     from auth import login_required, role_required
+    from security import (
+        add_status_update,
+        verify_shipment_chain,
+        log_security_event,
+        check_and_log_suspicious_input,
+    )
 
 shipments_bp = Blueprint("shipments", __name__, url_prefix="/api/shipments")
 
@@ -57,8 +71,12 @@ def create_shipment():
     - tracking_number is generated server-side.
     - Initial status is hardcoded to 'Order Placed'.
     - All input fields are validated and length-bounded.
+    - Initial milestone recorded via cryptographic chain of custody.
     """
     data = request.get_json(silent=True) or {}
+
+    # Passive intrusion sensor: scan for suspicious inputs
+    check_and_log_suspicious_input(data)
 
     sender_name = str(data.get("sender_name", "")).strip()
     sender_address = str(data.get("sender_address") or data.get("pickup_address", "")).strip()
@@ -119,15 +137,13 @@ def create_shipment():
         )
     )
 
-    # Insert initial status_updates audit record
-    execute_db(
-        """INSERT INTO status_updates (
-            shipment_id, updated_by_id, status, location, notes
-        ) VALUES (?, ?, ?, ?, ?)""",
-        (
-            shipment_id, customer_id, initial_status,
-            sender_address, "Shipment order registered in system."
-        )
+    # Record genesis milestone in cryptographic chain of custody
+    add_status_update(
+        shipment_id=shipment_id,
+        updated_by_id=customer_id,
+        status=initial_status,
+        location=sender_address,
+        notes="Shipment order registered in system."
     )
 
     return jsonify({
@@ -182,6 +198,7 @@ def get_shipment_details(tracking_number: str):
     - A customer can only view their own shipments.
     - To prevent object enumeration (BOLA / IDOR), return 404 (not 403) for other customers' shipments.
     - Admin users and the assigned delivery person may also view the shipment.
+    - Logs unauthorized shipment access attempts for intrusion analysis.
     """
     tracking_number = str(tracking_number).strip()
 
@@ -213,18 +230,23 @@ def get_shipment_details(tracking_number: str):
     )
 
     if not is_authorized:
+        # Log attack detection telemetry
+        log_security_event(
+            "UNAUTHORIZED_SHIPMENT_ACCESS",
+            f"Unauthorized attempt by user {current_user_id} ({current_role}) to access tracking '{tracking_number}'"
+        )
         # Return 404 (not 403) to prevent tracking number enumeration/probing
         return jsonify({"error": "Shipment not found."}), 404
 
     # Fetch status timeline audit trail
     updates = query_db(
         """SELECT su.id, su.shipment_id, su.updated_by_id, su.status,
-                  su.location, su.notes, su.timestamp,
+                  su.location, su.notes, su.timestamp, su.prev_hash, su.record_hash,
                   u.username AS updater_username, u.role AS updater_role
            FROM status_updates su
            JOIN users u ON su.updated_by_id = u.id
            WHERE su.shipment_id = ?
-           ORDER BY su.timestamp ASC, su.id ASC""",
+           ORDER BY su.id ASC""",
         (shipment["id"],)
     )
 
@@ -244,6 +266,7 @@ def cancel_shipment(shipment_id: int):
     - Customer can only cancel their own shipment (ownership check).
     - If the shipment belongs to someone else or does not exist, return 404 to prevent ID probing.
     - Only shipments in 'Order Placed' status can be cancelled.
+    - Cancellation is recorded into the cryptographic chain of custody.
     """
     customer_id = session["user_id"]
 
@@ -256,6 +279,10 @@ def cancel_shipment(shipment_id: int):
 
     # Ownership check: return 404 if not found or owned by another user
     if not shipment or shipment["customer_id"] != customer_id:
+        log_security_event(
+            "UNAUTHORIZED_SHIPMENT_ACCESS",
+            f"Unauthorized attempt by customer {customer_id} to cancel foreign shipment ID {shipment_id}"
+        )
         return jsonify({"error": "Shipment not found."}), 404
 
     # Status check: only 'Order Placed' can be cancelled
@@ -273,12 +300,13 @@ def cancel_shipment(shipment_id: int):
         (new_status, shipment_id, customer_id)
     )
 
-    # Record cancellation event in status_updates audit trail
-    execute_db(
-        """INSERT INTO status_updates (
-            shipment_id, updated_by_id, status, location, notes
-        ) VALUES (?, ?, ?, ?, ?)""",
-        (shipment_id, customer_id, new_status, "Customer Portal", "Shipment cancelled by customer.")
+    # Record cancellation event in cryptographic chain of custody
+    add_status_update(
+        shipment_id=shipment_id,
+        updated_by_id=customer_id,
+        status=new_status,
+        location="Customer Portal",
+        notes="Shipment cancelled by customer."
     )
 
     return jsonify({
@@ -286,3 +314,36 @@ def cancel_shipment(shipment_id: int):
         "shipment_id": shipment_id,
         "current_status": new_status
     }), 200
+
+
+@shipments_bp.route("/<int:shipment_id>/verify", methods=["GET"])
+@login_required
+def verify_custody_chain(shipment_id: int):
+    """Recompute and verify the cryptographic chain of custody for a shipment.
+
+    Security Rules:
+    - Only the shipment's customer owner or an admin can verify the chain.
+    - Returns 404 for non-owners to prevent ID probing.
+    - Recomputes SHA-256 hashes sequentially and returns validity or the first broken record.
+    """
+    shipment = query_db(
+        "SELECT id, customer_id, tracking_number FROM shipments WHERE id = ?",
+        (shipment_id,),
+        one=True
+    )
+
+    if not shipment:
+        return jsonify({"error": "Shipment not found."}), 404
+
+    current_user_id = session["user_id"]
+    current_role = session.get("role")
+
+    if current_role != "admin" and shipment["customer_id"] != current_user_id:
+        log_security_event(
+            "UNAUTHORIZED_SHIPMENT_ACCESS",
+            f"Unauthorized attempt by user {current_user_id} ({current_role}) to audit custody of shipment ID {shipment_id}"
+        )
+        return jsonify({"error": "Shipment not found."}), 404
+
+    result = verify_shipment_chain(shipment_id)
+    return jsonify(result), 200

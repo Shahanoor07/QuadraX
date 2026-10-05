@@ -137,6 +137,24 @@ ShipTrack adopts a clean two-tier decoupled architecture:
 - **Decision & Rationale:** Return HTTP 404 whenever a customer or unassigned courier attempts to access or cancel a shipment they do not own. This completely obscures the existence of shipments belonging to other users.
 - **Security & Performance Trade-offs:** Eliminates tracking ID enumeration vulnerabilities at zero runtime cost.
 
+### ADR-005: Cryptographic Chain of Custody for Shipment Milestones
+- **Status:** Accepted
+- **Context:** Shipment status updates and tracking milestones in delivery systems are subject to retroactive tampering or database alterations.
+- **Options Considered:**
+  1. Plain mutable database rows (Vulnerable to silent modifications)
+  2. Cryptographic hash-chained immutable ledger using SHA-256 (`prev_hash`, `record_hash`)
+- **Decision & Rationale:** Each status update links to its predecessor via SHA-256 hash chaining initialized by a 64-zero genesis hash. The `/api/shipments/<id>/verify` endpoint enables owners and admins to independently recompute and mathematically verify chain integrity or isolate the exact modified record.
+- **Security & Performance Trade-offs:** Provides mathematical non-repudiation and tamper-evidence with trivial hashing overhead.
+
+### ADR-006: Passive Attack Detection Sensors and Intrusion Audit Telemetry
+- **Status:** Accepted
+- **Context:** Proactively identifying scanning, brute-force, BOLA probing, and unauthorized access attempts without disrupting legitimate traffic or relying solely on heuristic blocking.
+- **Options Considered:**
+  1. No logging or plain file logs (Difficult to query, no audit API)
+  2. Structured `security_events` table populated by security middleware and sensors, accessible via paginated admin API
+- **Decision & Rationale:** Added `security_events` table and `log_security_event()` helper. Logs failed authentications, lockouts, 401/403 denials, cross-customer probing, and suspicious payload patterns. An admin-only paginated endpoint (`/api/admin/security-events`) provides live observability.
+- **Security & Performance Trade-offs:** Minimal DB write overhead; provides essential forensics and incident detection.
+
 ---
 
 ## 5. Engineering Journal & Real-Time Decision Log
@@ -156,13 +174,20 @@ ShipTrack adopts a clean two-tier decoupled architecture:
 - **Key Challenges:** Preventing ID probing and BOLA attacks when users query tracking numbers or IDs.
 - **Resolution:** Implemented server-side tracking number generation (`ST-YYYYMMDD-XXXXXX`), forced `customer_id` from session, and enforced HTTP 404 on foreign shipment accesses. Wrote automated pytest suite in `tests/test_customer_shipments.py`.
 
+### 2026-10-05 15:00 IST — Entry 4: Security Foundation — Hash Chaining & Attack Telemetry
+- **Focus:** Implemented SHA-256 chain of custody across status updates (`prev_hash`, `record_hash`), centralized `add_status_update()` helper, and `/api/shipments/<id>/verify` validation endpoint. Built intrusion telemetry system (`security_events`, `log_security_event()`, `check_and_log_suspicious_input()`) and paginated admin endpoint `GET /api/admin/security-events`.
+- **Key Challenges:** Guaranteeing that direct database mutation is immediately detected upon audit.
+- **Resolution:** Validated tamper detection in `tests/test_security_foundation.py` by mutating database rows and verifying that `/api/shipments/<id>/verify` flags `valid: false` with the exact tampered record metadata.
+
 ---
 
 ## 6. Testing, Security Verification & Deployment Record
 
 ### 6.1 Testing & Security Verification Strategy
-- **Unit & Schema Verification:** Schema parsed and validated in SQLite in-memory runner; all foreign keys, indexes, and constraints verified.
-- **Security Check:** Zero hardcoded secrets; `.env.example` created and `.gitignore` updated to prevent committing database or credential files.
+- **Unit & Security Test Suite:** 100% passing automated test suite (`python -m pytest tests/`):
+  - Customer shipment isolation, input validation, and BOLA prevention (`tests/test_customer_shipments.py`)
+  - Cryptographic chain of custody, database tampering detection, security event logging, and admin telemetry (`tests/test_security_foundation.py`)
+- **Security Check:** Zero hardcoded credentials, parameterized queries on all endpoints, anti-enumeration generic auth responses, rate limit lockouts, and HttpOnly/SameSite cookies.
 
 ### 6.2 Deployment Verification
 - **Target Platform:** Cloud Deployment (e.g. Render / Railway / PythonAnywhere)
