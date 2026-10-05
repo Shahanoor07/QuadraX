@@ -155,6 +155,15 @@ ShipTrack adopts a clean two-tier decoupled architecture:
 - **Decision & Rationale:** Added `security_events` table and `log_security_event()` helper. Logs failed authentications, lockouts, 401/403 denials, cross-customer probing, and suspicious payload patterns. An admin-only paginated endpoint (`/api/admin/security-events`) provides live observability.
 - **Security & Performance Trade-offs:** Minimal DB write overhead; provides essential forensics and incident detection.
 
+### ADR-007: Ephemeral Single-Use Hashed Tracking Links & GPS Telemetry Stream
+- **Status:** Accepted
+- **Context:** Protecting high-value shipments from link eavesdropping, unauthorized tracking scraping, and replay attacks while enabling recipient live tracking without full platform registration.
+- **Options Considered:**
+  1. Static permanent tracking URLs (Vulnerable to shoulder surfing, unauthorized distribution, scraping)
+  2. Cryptographically hashed single-use ephemeral links with live GPS ingestion
+- **Decision & Rationale:** Generated 32-byte cryptographically secure random tokens (`secrets.token_urlsafe(32)`). Stored exclusively as SHA-256 digests in `tracking_tokens`. The endpoint `GET /api/tracking/live/<token>` burns the token on the very first access (`is_used = 1`), rendering replay attempts invalid (HTTP 410 Gone) and logging security alerts. Couriers stream live GPS coordinates into `shipment_telemetry` with coordinate boundary validation and assignment isolation.
+- **Security & Performance Trade-offs:** Complete mitigation of replay attacks and URL interception; raw tokens cannot be recovered even if the database is compromised.
+
 ---
 
 ## 5. Engineering Journal & Real-Time Decision Log
@@ -184,15 +193,21 @@ ShipTrack adopts a clean two-tier decoupled architecture:
 - **Key Challenges:** Ensuring couriers cannot tamper with unassigned shipments or modify packages once marked Delivered.
 - **Resolution:** Enforced BOLA assignment check (`assigned_delivery_id == session["user_id"]`), terminal status freeze on Delivered shipments, and verified all 7 automated test suites passing.
 
+### 2026-10-05 15:25 IST — Entry 6: Live GPS Telemetry & Single-Use Ephemeral Tracking Links
+- **Focus:** Implemented high-value cargo live GPS tracking and anti-interception ephemeral links. Added `shipment_telemetry` and `tracking_tokens` tables. Authored public burn-on-first-view tracking blueprint (`src/backend/tracking.py`), customer token generator (`/api/shipments/<id>/generate-tracking-link`), and courier live GPS ingestion (`/api/delivery/shipments/<id>/telemetry`).
+- **Key Challenges:** Protecting against replay attacks and token interception while maintaining zero-knowledge token storage.
+- **Resolution:** Raw tokens are never persisted to the database; incoming tokens are checked via SHA-256 digests and immediately burned (`is_used = 1`). Replays return HTTP 410 Gone and log `REPLAY_ATTACK_DETECTED`. Created 9 comprehensive automated tests in `tests/test_gps_and_ephemeral_token.py`, achieving 16/16 test passes across the entire test suite.
+
 ---
 
 ## 6. Testing, Security Verification & Deployment Record
 
 ### 6.1 Testing & Security Verification Strategy
-- **Unit & Security Test Suite:** 100% passing automated test suite (`python -m pytest tests/`):
+- **Unit & Security Test Suite:** 100% passing automated test suite (16 tests across 4 test modules, 0 failures):
   - Customer shipment isolation, input validation, and BOLA prevention (`tests/test_customer_shipments.py`)
   - Cryptographic chain of custody, database tampering detection, security event logging, and admin telemetry (`tests/test_security_foundation.py`)
   - Delivery person lifecycle transitions, terminal state protection, courier assignment, and admin operations (`tests/test_delivery_and_admin.py`)
+  - Live GPS coordinate ingestion, single-use token burn, replay attack prevention, and expiration controls (`tests/test_gps_and_ephemeral_token.py`)
 - **Security Check:** Zero hardcoded credentials, parameterized queries on all endpoints, anti-enumeration generic auth responses, rate limit lockouts, and HttpOnly/SameSite cookies.
 
 ### 6.2 Deployment Verification

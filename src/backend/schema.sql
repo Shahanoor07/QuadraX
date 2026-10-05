@@ -99,3 +99,39 @@ CREATE TABLE IF NOT EXISTS security_events (
 CREATE INDEX IF NOT EXISTS idx_security_events_type ON security_events(event_type);
 CREATE INDEX IF NOT EXISTS idx_security_events_created ON security_events(created_at);
 CREATE INDEX IF NOT EXISTS idx_security_events_user ON security_events(user_id);
+
+-- 5. Shipment Telemetry Table
+-- Live GPS coordinate stream for tracking valuable shipments in real time
+CREATE TABLE IF NOT EXISTS shipment_telemetry (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    shipment_id INTEGER NOT NULL,
+    recorded_by_id INTEGER NOT NULL,
+    latitude REAL NOT NULL,
+    longitude REAL NOT NULL,
+    speed_kmh REAL DEFAULT 0.0,
+    heading_degrees REAL,
+    battery_pct REAL,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (shipment_id) REFERENCES shipments(id) ON DELETE CASCADE,
+    FOREIGN KEY (recorded_by_id) REFERENCES users(id) ON DELETE RESTRICT
+);
+
+CREATE INDEX IF NOT EXISTS idx_telemetry_shipment ON shipment_telemetry(shipment_id, timestamp);
+
+-- 6. Tracking Tokens Table
+-- Ephemeral, single-use, cryptographically hashed access links for high-value cargo
+CREATE TABLE IF NOT EXISTS tracking_tokens (
+    token_hash TEXT PRIMARY KEY,
+    shipment_id INTEGER NOT NULL,
+    created_by_user_id INTEGER NOT NULL,
+    expires_at TIMESTAMP NOT NULL,
+    is_used INTEGER DEFAULT 0,
+    used_at TIMESTAMP,
+    used_ip TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (shipment_id) REFERENCES shipments(id) ON DELETE CASCADE,
+    FOREIGN KEY (created_by_user_id) REFERENCES users(id) ON DELETE RESTRICT
+);
+
+CREATE INDEX IF NOT EXISTS idx_tracking_tokens_shipment ON tracking_tokens(shipment_id);
+CREATE INDEX IF NOT EXISTS idx_tracking_tokens_expires ON tracking_tokens(expires_at);

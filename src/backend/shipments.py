@@ -7,18 +7,22 @@ Implements:
 - GET /api/shipments/<tracking_number>: View shipment and tracking timeline with strict BOLA/ownership check.
 - POST /api/shipments/<id>/cancel: Cancel customer's own shipment (only allowed in 'Order Placed' status).
 - GET /api/shipments/<id>/verify: Recompute and audit cryptographic chain of custody (admin or owner only).
+- POST /api/shipments/<id>/generate-tracking-link: Generate 1-time single-use live GPS tracking link.
+- GET /api/shipments/<id>/telemetry: View live GPS telemetry history (owner or admin only).
 
 Security:
 - 100% Parameterized SQL queries.
 - Strict input sanitization and length validation.
 - Cryptographic SHA-256 chain of custody on all status updates.
-- Passive attack detection sensors logging unauthorized access and suspicious patterns.
+- Ephemeral single-use hashed token generation.
 - Returns 404 (anti-probing) when unauthorized users try to access other users' shipments.
 """
 
+import hashlib
 import re
 import secrets
 import time
+from datetime import datetime, timedelta, timezone
 from flask import Blueprint, request, jsonify, session
 
 try:
@@ -347,3 +351,102 @@ def verify_custody_chain(shipment_id: int):
 
     result = verify_shipment_chain(shipment_id)
     return jsonify(result), 200
+
+
+# ==============================================================================
+# EPHEMERAL LIVE GPS TRACKING TOKENS
+# ==============================================================================
+
+@shipments_bp.route("/<int:shipment_id>/generate-tracking-link", methods=["POST"])
+@login_required
+@role_required("customer")
+def generate_live_tracking_link(shipment_id: int):
+    """Generate a single-use, time-bound ephemeral tracking link for high-value cargo.
+
+    Security Rules:
+    - Only the owning customer can generate tracking links.
+    - Raw token is never stored in DB (only SHA-256 digest is stored).
+    - Default TTL 15 minutes (configurable up to 60 minutes).
+    - Single-use policy: token is burned permanently upon first view.
+    """
+    customer_id = session["user_id"]
+    data = request.get_json(silent=True) or {}
+
+    try:
+        ttl_minutes = min(60, max(5, int(data.get("ttl_minutes", 15))))
+    except (ValueError, TypeError):
+        ttl_minutes = 15
+
+    shipment = query_db(
+        "SELECT id, customer_id, tracking_number, current_status FROM shipments WHERE id = ?",
+        (shipment_id,),
+        one=True
+    )
+
+    if not shipment or shipment["customer_id"] != customer_id:
+        log_security_event(
+            "UNAUTHORIZED_SHIPMENT_ACCESS",
+            f"Customer {customer_id} attempted unauthorized token generation on foreign shipment {shipment_id}"
+        )
+        return jsonify({"error": "Shipment not found."}), 404
+
+    # Generate 32-byte cryptographically secure URL-safe random token
+    raw_token = secrets.token_urlsafe(32)
+
+    # Compute SHA-256 digest
+    token_hash = hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
+
+    # Calculate expiration in UTC
+    expires_dt = datetime.now(timezone.utc) + timedelta(minutes=ttl_minutes)
+    expires_str = expires_dt.strftime("%Y-%m-%d %H:%M:%S")
+
+    # Store hashed token in tracking_tokens table
+    execute_db(
+        """INSERT INTO tracking_tokens (token_hash, shipment_id, created_by_user_id, expires_at)
+           VALUES (?, ?, ?, ?)""",
+        (token_hash, shipment_id, customer_id, expires_str)
+    )
+
+    return jsonify({
+        "message": "Ephemeral single-use tracking link generated.",
+        "token": raw_token,
+        "tracking_url": f"/api/tracking/live/{raw_token}",
+        "expires_at": expires_str,
+        "ttl_minutes": ttl_minutes,
+        "single_use": True,
+        "security_policy": "BURNS_ON_FIRST_ACCESS"
+    }), 201
+
+
+@shipments_bp.route("/<int:shipment_id>/telemetry", methods=["GET"])
+@login_required
+def get_shipment_telemetry(shipment_id: int):
+    """Retrieve full live GPS coordinate telemetry trail for owner or admin."""
+    current_user_id = session["user_id"]
+    current_role = session.get("role")
+
+    shipment = query_db(
+        "SELECT id, customer_id FROM shipments WHERE id = ?",
+        (shipment_id,),
+        one=True
+    )
+
+    if not shipment:
+        return jsonify({"error": "Shipment not found."}), 404
+
+    if current_role != "admin" and shipment["customer_id"] != current_user_id:
+        return jsonify({"error": "Shipment not found."}), 404
+
+    telemetry = query_db(
+        """SELECT id, latitude, longitude, speed_kmh, heading_degrees, battery_pct, timestamp
+           FROM shipment_telemetry
+           WHERE shipment_id = ?
+           ORDER BY id ASC""",
+        (shipment_id,)
+    )
+
+    return jsonify({
+        "shipment_id": shipment_id,
+        "telemetry": [dict(t) for t in telemetry],
+        "points_count": len(telemetry)
+    }), 200

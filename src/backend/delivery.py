@@ -248,3 +248,76 @@ def update_shipment_status(shipment_id: int):
         "new_status": status,
         "status_update_id": update_id
     }), 200
+
+
+@delivery_bp.route("/shipments/<int:shipment_id>/telemetry", methods=["POST"])
+@login_required
+@role_required("delivery_person")
+def record_shipment_telemetry(shipment_id: int):
+    """Record live GPS coordinate telemetry for an assigned shipment.
+
+    Security Rules:
+    - Only the assigned courier can record GPS location data.
+    - Validates latitude (-90 to 90) and longitude (-180 to 180).
+    - Cannot record telemetry on Delivered or Cancelled shipments.
+    """
+    courier_id = session["user_id"]
+    data = request.get_json(silent=True) or {}
+    check_and_log_suspicious_input(data)
+
+    shipment = query_db(
+        "SELECT id, current_status, assigned_delivery_id FROM shipments WHERE id = ?",
+        (shipment_id,),
+        one=True
+    )
+
+    if not shipment or shipment["assigned_delivery_id"] != courier_id:
+        log_security_event(
+            "UNAUTHORIZED_SHIPMENT_ACCESS",
+            f"Courier {courier_id} attempted unauthorized telemetry post on shipment {shipment_id}"
+        )
+        return jsonify({"error": "Shipment not found."}), 404
+
+    if shipment["current_status"] in ["Delivered", "Cancelled"]:
+        return jsonify({
+            "error": f"Cannot submit telemetry for shipment in terminal state '{shipment['current_status']}'."
+        }), 400
+
+    try:
+        latitude = float(data.get("latitude"))
+        longitude = float(data.get("longitude"))
+        if not (-90.0 <= latitude <= 90.0) or not (-180.0 <= longitude <= 180.0):
+            return jsonify({"error": "Latitude must be between -90 and 90, longitude between -180 and 180."}), 400
+    except (ValueError, TypeError):
+        return jsonify({"error": "Valid numeric latitude and longitude are required."}), 400
+
+    try:
+        speed_kmh = max(0.0, float(data.get("speed_kmh", 0.0)))
+    except (ValueError, TypeError):
+        speed_kmh = 0.0
+
+    try:
+        heading_degrees = float(data.get("heading_degrees")) if data.get("heading_degrees") is not None else None
+    except (ValueError, TypeError):
+        heading_degrees = None
+
+    try:
+        battery_pct = float(data.get("battery_pct")) if data.get("battery_pct") is not None else None
+    except (ValueError, TypeError):
+        battery_pct = None
+
+    telemetry_id = execute_db(
+        """INSERT INTO shipment_telemetry (
+            shipment_id, recorded_by_id, latitude, longitude,
+            speed_kmh, heading_degrees, battery_pct
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)""",
+        (shipment_id, courier_id, latitude, longitude, speed_kmh, heading_degrees, battery_pct)
+    )
+
+    return jsonify({
+        "message": "GPS telemetry recorded successfully.",
+        "telemetry_id": telemetry_id,
+        "latitude": latitude,
+        "longitude": longitude,
+        "speed_kmh": speed_kmh
+    }), 201

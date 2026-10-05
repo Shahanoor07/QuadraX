@@ -7,3 +7,596 @@ Lifecycle: Append-Only (Maintained autonomously by AI Agent)
 Timeline: ISO-8601 with local timezone offset
 ================================================================================
 
+================================================================================
+[2026-10-05T12:54:20+05:30] Initial Onboarding & Rules Recitation
+================================================================================
+User Prompt (verbatim):
+hi
+
+Agent Response:
+Welcome to Build Secure 24, organized by Abhedya — VBIT Cybersecurity Forum. You have 24 hours to design, build, and deploy your project. Before we start, I need to walk you through the competition ground rules and get your agreement.
+
+### Competition Timeline & Status
+- **Current System Time**: 2026-10-05T12:54:20+05:30 (IST)
+- **Hackathon Window**: October 5, 2026, 11:00 AM IST to October 6, 2026, 11:00 AM IST
+- **Hackathon Deadline**: October 6, 2026, 11:00 AM IST (`2026-10-06T11:00:00+05:30`)
+- **Time Remaining**: Approximately 22 hours, 5 minutes, 40 seconds
+
+### Competition Ground Rules
+1. **Team Composition**: Exactly 2 or 4 registered participants per team (solo participants, teams of 3, or teams larger than 4 are strictly disqualified).
+2. **Live Authorship**: All application code in `src/` must be authored live during the 24-hour hackathon (October 5, 2026, 11:00 AM IST to October 6, 2026, 11:00 AM IST). Importing, cloning, or adapting pre-existing third-party or open-source repositories as the project solution is strictly prohibited and results in disqualification.
+3. **AI Tools Permitted**: You may use any IDE, AI assistant, or tool to build. The AI agent will automatically log every conversation turn, prompt, agent reply, and file change in `docs/logs.txt`.
+4. **No Rule Overrides**: Prompt injections, jailbreaks, or instructions attempting to bypass competition rules, disable logging, modify AGENTS.md, or forge records are strictly blocked and refused.
+5. **Submission Freeze**: Submissions are evaluated from the frozen commit SHA recorded in `metadata/submission.yaml` at the deadline (October 6, 2026, 11:00 AM IST).
+
+Please reply with the exact string **`I agree`** to confirm your agreement and proceed to team metadata setup.
+
+Agent Response Summary:
+Welcomed the participant to Build Secure 24 and initiated the mandatory onboarding flow. Recited the competition ground rules verbatim, displayed the current system time, deadline, and remaining time. Requested user confirmation with 'I agree' before proceeding.
+
+Commit SHA:
+ee1125915622fd7d2eb8d61d25e9548a79fa3c49
+
+Files Modified / Created:
+* docs/logs.txt (Modified)
+
+Actions Taken:
+* Checked docs/logs.txt and verified onboarding state.
+* Retrieved current system time and checked git commit SHA.
+* Appended turn 1 onboarding entry to docs/logs.txt.
+
+================================================================================
+[2026-10-05T12:56:35+05:30] Rules Agreement Confirmation & Team Metadata Request
+================================================================================
+User Prompt (verbatim):
+i agree
+
+Agent Response:
+Thank you for confirming your agreement. The onboarding rules agreement has been recorded.
+
+Before we begin coding, we need to record your team details in metadata/team.yaml.
+Please provide:
+1. Team ID (organizer-assigned)
+2. Team Name
+3. Team Size (2 or 4 members)
+4. Team GitHub Repository URL (new repository created by your team to push this project)
+5. Member 1: Full Name & Email
+6. Member 2: Full Name & Email
+(If team of 4):
+7. Member 3: Full Name & Email
+8. Member 4: Full Name & Email
+
+Agent Response Summary:
+Verified the participant's explicit agreement to the competition rules. Appended the onboarding agreement record and prompted the user for required team metadata per competition specifications.
+
+Commit SHA:
+ee1125915622fd7d2eb8d61d25e9548a79fa3c49
+
+Files Modified / Created:
+* docs/logs.txt (Modified)
+
+Actions Taken:
+* Validated 'i agree' response from participant.
+* Appended §5.2 turn entry to docs/logs.txt.
+* Appended §3.4 onboarding agreement completion block to docs/logs.txt.
+* Checked metadata/team.yaml and prompted user for team details.
+
+================================================================================
+[2026-10-05T12:56:35+05:30] ONBOARDING COMPLETE
+================================================================================
+AGREEMENT RECORDED: c:\Users\shahanoor\OneDrive\Desktop\QuadraX
+Agent: Antigravity
+System Time: 2026-10-05T12:56:35+05:30
+Deadline: 2026-10-06T11:00:00+05:30
+
+================================================================================
+[2026-10-05T13:02:54+05:30] Team ID Recorded & Remaining Team Details Requested
+================================================================================
+User Prompt (verbatim):
+1. 29
+
+Agent Response:
+Recorded Team ID 29 in `metadata/team.yaml` and `metadata/submission.yaml`.
+
+Please provide the remaining team metadata:
+2. **Team Name**
+3. **Team Size** (2 or 4 members)
+4. **Team GitHub Repository URL** (Detected origin: `https://github.com/Shahanoor07/QuadraX.git` — confirm if this is the target repo or provide a different one)
+5. **Member 1**: Full Name & Email
+6. **Member 2**: Full Name & Email
+*(If team of 4)*:
+7. **Member 3**: Full Name & Email
+8. **Member 4**: Full Name & Email
+
+Agent Response Summary:
+Recorded Team ID 29 into metadata/team.yaml and metadata/submission.yaml. Committed changes with git and prompted participant to provide the remaining required team metadata fields.
+
+Commit SHA:
+8f8e8cecf1989408b6c47f3dfc21227524fdf2c8
+
+Files Modified / Created:
+* metadata/team.yaml (Modified)
+* metadata/submission.yaml (Modified)
+* docs/logs.txt (Modified)
+
+Actions Taken:
+* Updated team_id to '29' in metadata/team.yaml and metadata/submission.yaml.
+* Committed metadata updates via git (commit SHA: 8f8e8cecf1989408b6c47f3dfc21227524fdf2c8).
+* Appended turn entry to docs/logs.txt.
+* Prompted user for remaining team metadata.
+
+================================================================================
+[2026-10-05T13:04:54+05:30] Team Metadata Complete & Normal Session Flow Started
+================================================================================
+User Prompt (verbatim):
+team:QuadraX
+  team_id: "29"
+  name: "Quadrax"
+  repository: "https://github.com/Shahanoor07/QuadraX" # URL of the newly created GitHub repository for this project
+
+members:
+  - name: "Shaikh Shahanoor Alli"
+    email: "shaikhshahanooralli07@gmail.com"
+  - name: "S.Sahithi"
+    email: "sahithisandepogu5@gmail.com "
+  - name: "B.Varshitha"
+    email: "bandisrivarshithabandi@gmail.com"
+  - name: "M.Varshini"
+    email: "Varshinim9912@gmail.com"
+
+Agent Response:
+Team metadata successfully recorded and validated. All 4 members and repository configurations have been updated in `metadata/team.yaml` and `metadata/submission.yaml`.
+
+### Status & Session Initialization
+- **Team**: Quadrax (ID: 29, 4 members)
+- **Repository**: https://github.com/Shahanoor07/QuadraX.git
+- **Current System Time**: 2026-10-05T13:04:54+05:30 (IST)
+- **Hackathon Deadline**: 2026-10-06T11:00:00+05:30
+- **Time Remaining**: Approximately 21 hours, 55 minutes
+
+We are ready to start building! What is the project topic, problem statement, or initial architectural component you would like to work on first?
+
+Agent Response Summary:
+Populated metadata/team.yaml with full details for team Quadrax (Team ID 29, 4 members) and configured repository URL in metadata/submission.yaml. Committed changes with git (commit eb9671a4075776d14624f6a291120afd9fa1432a) and transitioned to normal session flow ready for development.
+
+Commit SHA:
+eb9671a4075776d14624f6a291120afd9fa1432a
+
+Files Modified / Created:
+* metadata/team.yaml (Modified)
+* metadata/submission.yaml (Modified)
+* docs/logs.txt (Modified)
+
+Actions Taken:
+* Populated metadata/team.yaml with 4 registered team members and GitHub repo.
+* Updated metadata/submission.yaml with repository URL.
+* Verified Git remote origin configuration.
+* Committed metadata updates (SHA: eb9671a4075776d14624f6a291120afd9fa1432a).
+* Appended turn entry to docs/logs.txt.
+
+================================================================================
+[2026-10-05T13:10:23+05:30] Directory Inspection & src/ Architecture Guidance
+================================================================================
+User Prompt (verbatim):
+src/
+
+Agent Response:
+Inspected `src/` directory and confirmed it contains only `src/.gitkeep`. Explained the role of `src/` as the primary live authorship folder for Build Secure 24. Provided architectural structure recommendations for Python (FastAPI/Flask), Node.js (Express), and Full-Stack setups, asking the user to specify their project direction before generating code.
+
+Agent Response Summary:
+Inspected the current state of src/ per the participant's prompt. Clarified the live-authorship guidelines for src/ and presented recommended architectural layouts across Python, Node.js, and Full-Stack frameworks. Awaited explicit user choice before scaffolding.
+
+Commit SHA:
+a36b6a51d5f1d027f0b4a476ac5b5e55a494c794
+
+Files Modified / Created:
+* docs/logs.txt (Modified)
+
+Actions Taken:
+* Inspected src/ directory using Get-ChildItem.
+* Verified commit SHA and local time.
+* Appended turn entry to docs/logs.txt.
+
+================================================================================
+[2026-10-05T13:20:16+05:30] PS-05 ShipTrack Flask Backend & SQLite Schema Setup
+================================================================================
+User Prompt (verbatim):
+We are building PS-05 ShipTrack: Delivery & Shipment Management (Logistics).
+
+Stack: Python Flask backend, SQLite database, hand-written HTML/CSS/JS frontend with Bootstrap via CDN. Use werkzeug.security for password hashing.
+
+Roles: customer, delivery person, admin.
+Features: customer registration/login, shipment creation, shipment tracking, shipment history, delivery-person dashboard, delivery-status updates, shipment assignment, admin management.
+
+Security rules for every route: parameterized SQL only, role checks on every route, ownership checks so users can only access their own shipments, escape all user input.
+
+Folder layout: src/backend/ and src/frontend/.
+
+First task only: set up the Flask project in src/backend/ with the SQLite schema (users, shipments, status_updates) and a requirements.txt. Do not build anything else yet.
+
+Agent Response:
+Created the foundational Flask backend scaffold for PS-05 ShipTrack in `src/backend/`:
+1. `src/backend/requirements.txt`: Specified Flask, Werkzeug, and python-dotenv.
+2. `src/backend/schema.sql`: Authored SQLite DDL for `users` (customer, delivery_person, admin roles), `shipments` (tracking, sender, recipient, assigned courier, lifecycle stages), and `status_updates` (audit logs & timeline). Included foreign key constraints (`PRAGMA foreign_keys = ON;`) and performance indexes.
+3. `src/backend/db.py`: Created database helper providing connection management with foreign key enforcement and strictly parameterized SQL query execution (`query_db`, `execute_db`).
+4. `src/backend/app.py`: Created Flask application factory, database initialization CLI, and a `/api/health` status route.
+5. `src/backend/.env.example` and `.gitignore`: Configured security hygiene to prevent leaking database files, caches, or credentials.
+6. `docs/APPROACH.md`: Documented the full architecture, threat model, ADRs, and milestone timeline.
+7. Validated the schema syntax against in-memory SQLite and committed/pushed all changes to GitHub.
+
+Agent Response Summary:
+Established the backend scaffolding for ShipTrack in src/backend/ with a validated SQLite schema covering users, shipments, and status_updates tables, alongside requirements.txt, db helpers, and a minimal Flask app. Updated APPROACH.md to align with PS-05 requirements, verified schema execution in SQLite, and pushed commit 0fd836698de691df9ef1aaee01cd0164f7ef90b9 to GitHub.
+
+Commit SHA:
+0fd836698de691df9ef1aaee01cd0164f7ef90b9
+
+Files Modified / Created:
+* .gitignore (Created)
+* docs/APPROACH.md (Modified)
+* docs/logs.txt (Modified)
+* src/backend/__init__.py (Created)
+* src/backend/.env.example (Created)
+* src/backend/app.py (Created)
+* src/backend/db.py (Created)
+* src/backend/requirements.txt (Created)
+* src/backend/schema.sql (Created)
+
+Actions Taken:
+* Created src/backend/requirements.txt with Flask, Werkzeug, and python-dotenv.
+* Authored src/backend/schema.sql with users, shipments, and status_updates tables.
+* Implemented parameterized database helpers in src/backend/db.py.
+* Created Flask entrypoint and application factory in src/backend/app.py.
+* Added .gitignore and src/backend/.env.example for security hygiene.
+* Validated SQLite schema integrity in in-memory test script.
+* Updated docs/APPROACH.md with threat model, architecture, and ADRs.
+* Staged, committed, and pushed changes to GitHub (commit: 0fd836698de691df9ef1aaee01cd0164f7ef90b9).
+* Appended turn entry to docs/logs.txt.
+
+================================================================================
+[2026-10-05T13:57:06+05:30] Authentication System, Session Security & Seeding Script
+================================================================================
+User Prompt (verbatim):
+Next task: build the authentication system in src/backend/auth.py and register it in app.py.
+
+Include:
+- POST /api/auth/register (public sign-up always creates role "customer"; never accept a role from the client)
+- POST /api/auth/login and POST /api/auth/logout
+- GET /api/auth/me
+- Passwords hashed with werkzeug.security
+- Flask sessions with a SECRET_KEY from environment variables; set cookies HttpOnly and SameSite=Lax
+- Input validation on all fields (email format, minimum password length)
+- A generic error message for failed logins, so it doesn't reveal whether the email exists
+- Basic rate limiting or lockout on login attempts
+- Decorators login_required and role_required(*roles) for use on later routes
+- A seed script that creates one admin account and one delivery person account for testing, with passwords read from environment variables, not hardcoded
+
+Only build auth. Do not build shipment routes or the frontend yet.
+
+Agent Response:
+Implemented the complete authentication and authorization system in `src/backend/auth.py`, configured session security in `src/backend/app.py`, and authored the credential seeding script `src/backend/seed.py`:
+
+1. **`src/backend/auth.py`**:
+   - `POST /api/auth/register`: Public customer self-registration. Role is strictly hardcoded to `'customer'`, discarding any client-provided role. Validates email format (RFC regex), username length/characters, and password minimum length (>= 8). Uses parameterized SQL for existence check and insertion. Hashes passwords with `werkzeug.security.generate_password_hash`.
+   - `POST /api/auth/login`: Validates credentials using `werkzeug.security.check_password_hash`. Returns a uniform generic error message on any failure to prevent account enumeration. Tracks failed login attempts per client IP and identifier, enforcing a 15-minute lockout (HTTP 429) after 5 failed attempts within 5 minutes. On success, initializes session with `user_id`, `username`, and `role`.
+   - `POST /api/auth/logout`: Clears session data.
+   - `GET /api/auth/me`: Protected endpoint returning authenticated user profile (excluding password hash).
+   - `@login_required`: Guards endpoints requiring active session authentication.
+   - `@role_required(*roles)`: Enforces role-based access control (RBAC), returning 403 Forbidden for unauthorized roles.
+
+2. **`src/backend/app.py`**:
+   - Registered `auth_bp` blueprint under `/api/auth`.
+   - Configured secure cookie attributes: `SESSION_COOKIE_HTTPONLY = True`, `SESSION_COOKIE_SAMESITE = 'Lax'`, and environment-driven `SECRET_KEY`.
+
+3. **`src/backend/db.py`**:
+   - Enhanced `get_db()` to work both inside Flask application request context and in standalone CLI scripts.
+
+4. **`src/backend/seed.py`**:
+   - Authorizes creation or updating of one Admin account and one Delivery Person account.
+   - Strictly reads passwords from `ADMIN_PASSWORD` and `DELIVERY_PASSWORD` environment variables, exiting with code 1 and error if omitted.
+   - Updated `src/backend/.env.example` to document seed credentials.
+
+5. **`docs/APPROACH.md`**:
+   - Updated milestone table marking Phase 2 as completed.
+   - Documented ADR-003 covering rate limiting and anti-enumeration defenses, and added Engineering Journal Entry 2.
+
+6. **Testing & Verification**:
+   - Executed comprehensive unit test suite verifying registration role locking, input validation, generic login error messaging, rate limit lockout (429), logout, session termination, and RBAC decorators.
+   - Validated seed script error handling and account creation.
+   - Staged, committed, and pushed changes to GitHub (commit: e66f62f206aa239f5075ccd4336a47ef74962978).
+
+Agent Response Summary:
+Constructed src/backend/auth.py with secure registration, login, logout, profile retrieval, rate limiting, and RBAC decorators. Configured HttpOnly and SameSite cookie policies in app.py, created an environment-driven seed script in seed.py, verified all behaviors through end-to-end tests, and pushed commit e66f62f206aa239f5075ccd4336a47ef74962978 to GitHub.
+
+Commit SHA:
+e66f62f206aa239f5075ccd4336a47ef74962978
+
+Files Modified / Created:
+* docs/APPROACH.md (Modified)
+* docs/logs.txt (Modified)
+* src/backend/.env.example (Modified)
+* src/backend/app.py (Modified)
+* src/backend/auth.py (Created)
+* src/backend/db.py (Modified)
+* src/backend/seed.py (Created)
+
+Actions Taken:
+* Created src/backend/auth.py with registration, login, logout, /api/auth/me, rate limiting, and RBAC decorators.
+* Configured HttpOnly and SameSite cookie options in src/backend/app.py.
+* Created src/backend/seed.py reading test account credentials from environment variables.
+* Updated src/backend/.env.example with seed account environment variables.
+* Executed end-to-end unit tests verifying registration role lockdown, generic error responses, rate-limiting lockout, and RBAC decorators.
+* Updated docs/APPROACH.md with ADR-003 and Journal Entry 2.
+* Staged, committed, and pushed commit e66f62f206aa239f5075ccd4336a47ef74962978 to GitHub.
+* Appended turn entry to docs/logs.txt.
+
+================================================================================
+[2026-10-05T14:18:45+05:30] Customer Shipment Routes, Anti-Probing & BOLA Tests
+================================================================================
+User Prompt (verbatim):
+Next task: build customer shipment routes in src/backend/shipments.py and register the blueprint in app.py.
+
+Include (all require login, customer role unless stated):
+- POST /api/shipments: create a shipment (pickup address, delivery address, recipient name/phone, package description/weight). Generate a unique tracking number server-side. Initial status "Order Placed" with a first status_updates entry.
+- GET /api/shipments: list only the logged-in customer's own shipments (history), newest first
+- GET /api/shipments/<tracking_number>: return shipment details plus its status timeline. A customer can only view their own shipments; return 404 (not 403) for other people's shipments so IDs can't be probed. Admin and the assigned delivery person may also view it.
+- POST /api/shipments/<id>/cancel: customer can cancel only their own shipment, and only while status is "Order Placed"
+
+Security: parameterized SQL only, validate and length-limit all inputs, never trust customer_id or status from the client, ownership checks on every route.
+
+Write tests that try to read and cancel another customer's shipment. Only build these routes. No delivery or admin routes and no frontend yet.
+
+Agent Response:
+Built the customer shipment routes in `src/backend/shipments.py`, registered the blueprint in `src/backend/app.py`, and authored an automated test suite in `tests/test_customer_shipments.py`:
+
+1. **`src/backend/shipments.py`**:
+   - `POST /api/shipments`: Creates shipment request with rigorous validation (pickup/delivery addresses 5-300 chars, recipient phone regex, package description max 500 chars, weight between 0.01 and 1000 kg). Server generates unique non-sequential tracking number (`ST-YYYYMMDD-XXXXXX`). Derives `customer_id` strictly from session. Sets initial status `'Order Placed'` and inserts initial audit record in `status_updates`.
+   - `GET /api/shipments`: Queries only the logged-in customer's own shipments via parameterized `customer_id` filter, ordered newest first (`ORDER BY created_at DESC, id DESC`).
+   - `GET /api/shipments/<tracking_number>`: Looks up shipment and its complete audit trail from `status_updates`. Enforces authorization: Customers can view only their own shipments, couriers can view only assigned shipments, and admins can view any. For unauthorized customers or unassigned couriers, returns HTTP 404 (not 403) to prevent tracking ID enumeration and probing.
+   - `POST /api/shipments/<id>/cancel`: Verifies customer ownership (returns 404 if owned by someone else or non-existent). Verifies that status is `'Order Placed'` (returns 400 otherwise). Updates status to `'Cancelled'` and logs the event in `status_updates`.
+
+2. **`src/backend/app.py`**:
+   - Registered `shipments_bp` under `/api/shipments`.
+
+3. **`tests/test_customer_shipments.py`**:
+   - Comprehensive test suite covering shipment creation, client status override rejection, customer isolation, detail retrieval, foreign customer read attempt (verifying HTTP 404), foreign customer cancel attempt (verifying HTTP 404), valid cancellation and timeline verification, duplicate cancellation rejection, admin access, and assigned vs unassigned courier access. All tests passed with 100% success rate.
+
+4. **`docs/APPROACH.md`**:
+   - Updated milestone table, documented ADR-004 (Anti-Probing HTTP 404 Defense), and recorded Engineering Journal Entry 3.
+
+5. **Commit & Push**:
+   - Committed changes (commit SHA: c4570024fe2fef22c22e1c52db80a127d7330fad) and pushed to GitHub main branch.
+
+Agent Response Summary:
+Created customer shipment endpoints in src/backend/shipments.py with server-side tracking number generation, parameterized queries, and strict object ownership checks. Enforced anti-probing HTTP 404 responses for unauthorized cross-customer accesses. Wrote comprehensive pytest tests confirming BOLA/IDOR protection and pushed commit c4570024fe2fef22c22e1c52db80a127d7330fad to GitHub.
+
+Commit SHA:
+c4570024fe2fef22c22e1c52db80a127d7330fad
+
+Files Modified / Created:
+* docs/APPROACH.md (Modified)
+* docs/logs.txt (Modified)
+* src/backend/app.py (Modified)
+* src/backend/db.py (Modified)
+* src/backend/requirements.txt (Modified)
+* src/backend/shipments.py (Created)
+* tests/test_customer_shipments.py (Created)
+
+Actions Taken:
+* Created src/backend/shipments.py implementing POST /api/shipments, GET /api/shipments, GET /api/shipments/<tracking_number>, and POST /api/shipments/<id>/cancel.
+* Registered shipments blueprint in src/backend/app.py.
+* Created automated test suite in tests/test_customer_shipments.py testing unauthorized read/cancel probing.
+* Updated src/backend/db.py for clean Python 3.12+ SQLite connection handling without deprecation warnings.
+* Added pytest to requirements.txt and ran test suite (all tests passing).
+* Updated docs/APPROACH.md with ADR-004 and Engineering Journal Entry 3.
+* Staged, committed, and pushed commit c4570024fe2fef22c22e1c52db80a127d7330fad to GitHub.
+* Appended turn entry to docs/logs.txt.
+
+================================================================================
+[2026-10-05T15:03:30+05:30] Security Foundation: Chain of Custody & Attack Telemetry
+================================================================================
+User Prompt (verbatim):
+  Next task: security foundation in src/backend/.
+
+1. Chain of custody: add prev_hash and record_hash columns to status_updates. record_hash = SHA-256 over shipment_id, status, location, updated_by, timestamp and prev_hash. The first record of a shipment uses a fixed genesis value as prev_hash. Create one helper, add_status_update(), and make every route that writes a status use it. Add GET /api/shipments/<id>/verify (admin or the shipment's owner) that recomputes the chain and returns valid, or the first broken record.
+
+2. Attack detection: add a security_events table (id, event_type, user_id nullable, ip, path, details, created_at) and a log_security_event() helper. Log failed logins, lockouts, 401/403 denials, attempts to access another user's shipment, and requests with suspicious input patterns (log only; do not rely on this for protection). Add GET /api/admin/security-events, admin only, paginated, newest first.
+
+Use parameterized SQL only. Write tests: tamper with a status_updates row directly and confirm verify fails; confirm events get logged. Only build this. No frontend yet.
+
+Agent Response:
+Implemented the complete security foundation in `src/backend/`:
+
+1. **Cryptographic Chain of Custody**:
+   - Updated `src/backend/schema.sql` to add `prev_hash TEXT NOT NULL` and `record_hash TEXT NOT NULL` to `status_updates`.
+   - Created `src/backend/security.py` implementing `compute_status_hash()` and `add_status_update()`. Initial milestones chain from a 64-zero genesis value (`GENESIS_PREV_HASH`). Subsequent milestones link cryptographically to the prior `record_hash`.
+   - Updated `create_shipment()` and `cancel_shipment()` in `src/backend/shipments.py` to exclusively use `add_status_update()`.
+   - Implemented `verify_shipment_chain()` and `GET /api/shipments/<id>/verify`, allowing only admins or shipment owners to audit the cryptographic chain. Detects broken linkage or altered milestone content, returning `valid: false` and the offending record metadata.
+
+2. **Attack Detection & Intrusion Telemetry**:
+   - Added `security_events` table to `src/backend/schema.sql`.
+   - Implemented `log_security_event()` and passive scanner `check_and_log_suspicious_input()` in `src/backend/security.py`.
+   - Integrated event logging into `src/backend/auth.py` for `FAILED_LOGIN`, `ACCOUNT_LOCKOUT`, `UNAUTHORIZED_ACCESS` (401), and `FORBIDDEN_ACCESS` (403).
+   - Integrated event logging into `src/backend/shipments.py` for `UNAUTHORIZED_SHIPMENT_ACCESS` and `SUSPICIOUS_INPUT`.
+   - Created `src/backend/admin.py` with `GET /api/admin/security-events` (admin only, paginated with `page` and `per_page`, newest first) and registered `admin_bp` in `src/backend/app.py`.
+
+3. **Automated Test Suite**:
+   - Created `tests/test_security_foundation.py` verifying valid chain auditing, direct database mutation / tampering detection, unauthorized access rejection (404), failed logins, lockouts, 401/403 logging, suspicious input detection, and admin telemetry pagination.
+   - All 5 tests passed across the entire test suite.
+
+4. **Documentation, ADRs & Git Push**:
+   - Updated `docs/APPROACH.md` with ADR-005 (Cryptographic Chain of Custody), ADR-006 (Passive Attack Detection Sensors and Intrusion Audit Telemetry), and Engineering Journal Entry 4.
+   - Committed changes (commit SHA: aae82388f7754f3524393a1532d940cf60053a1c) and pushed to GitHub main branch.
+
+Agent Response Summary:
+Built cryptographic SHA-256 chain of custody for status updates with verification endpoint and tampering detection. Implemented security_events table, passive attack telemetry logging, and paginated admin security events API. Validated complete tamper detection and event logging via pytest (100% pass) and pushed commit aae82388f7754f3524393a1532d940cf60053a1c to GitHub.
+
+Commit SHA:
+aae82388f7754f3524393a1532d940cf60053a1c
+
+Files Modified / Created:
+* docs/APPROACH.md (Modified)
+* docs/logs.txt (Modified)
+* src/backend/admin.py (Created)
+* src/backend/app.py (Modified)
+* src/backend/auth.py (Modified)
+* src/backend/schema.sql (Modified)
+* src/backend/security.py (Created)
+* src/backend/shipments.py (Modified)
+* tests/test_security_foundation.py (Created)
+
+Actions Taken:
+* Updated src/backend/schema.sql with prev_hash, record_hash, and security_events table.
+* Created src/backend/security.py implementing add_status_update, verify_shipment_chain, log_security_event, and check_and_log_suspicious_input.
+* Updated src/backend/shipments.py to route status updates through add_status_update and added GET /api/shipments/<id>/verify.
+* Updated src/backend/auth.py with telemetry for failed logins, lockouts, 401/403 denials, and suspicious inputs.
+* Created src/backend/admin.py with paginated GET /api/admin/security-events and registered in app.py.
+* Authored and executed tests/test_security_foundation.py (all 5 test suites passed).
+* Updated docs/APPROACH.md with ADR-005, ADR-006, and Journal Entry 4.
+* Staged, committed, and pushed commit aae82388f7754f3524393a1532d940cf60053a1c to GitHub.
+* Appended turn entry to docs/logs.txt.
+
+================================================================================
+[2026-10-05T15:08:56+05:30] Live GPS & Ephemeral One-Time Tracking Token Architecture
+================================================================================
+User Prompt (verbatim):
+we are also thinkung to aadd a live grps so user can track if anything valubale is being shipped and if any hacker tries to hack into it they cant as we give them 1 time link that only user can be accesed.
+
+Agent Response:
+Provided engineering guidance and a secure technical specification for Live GPS Tracking with Ephemeral Single-Use Access Links:
+1. Architectural Design:
+   - Evaluated the security value of tokenized, single-use tracking links for high-value cargo.
+   - Proposed storing hashed tokens (SHA-256) in a `tracking_tokens` table to prevent token harvesting during DB exposure.
+   - Proposed a `shipment_telemetry` table for GPS coordinate ingestion (`latitude`, `longitude`, `timestamp`, `speed`).
+   - Defined delivery courier ingestion route (`POST /api/delivery/shipments/<id>/telemetry`) and customer token generation (`POST /api/shipments/<id>/token`).
+   - Outlined anti-replay and expiration policies (e.g. 15-minute TTL, single-use burn on access, audit logging in `security_events`).
+2. Awaited participant confirmation to implement this feature or complete the remaining delivery/admin roles first.
+
+Agent Response Summary:
+Analyzed the participant's proposal for live GPS tracking with single-use ephemeral links. Provided a comprehensive secure architecture design covering hashed token storage, geofence/telemetry tables, anti-replay protections, and integration with the security_events audit layer.
+
+Commit SHA:
+aae82388f7754f3524393a1532d940cf60053a1c
+
+Files Modified / Created:
+* docs/logs.txt (Modified)
+
+Actions Taken:
+* Analyzed requirements for ephemeral live GPS tracking tokens.
+* Outlined cryptographic token hashing and anti-replay threat model.
+* Appended turn entry to docs/logs.txt.
+
+================================================================================
+[2026-10-05T15:17:15+05:30] Delivery Courier & Admin Workflows Implementation
+================================================================================
+User Prompt (verbatim):
+option 2
+
+Agent Response:
+Implemented all core delivery-person and admin management operations across `src/backend/delivery.py` and `src/backend/admin.py`:
+
+1. **`src/backend/delivery.py`**:
+   - `GET /api/delivery/dashboard`: Courier dashboard with active tasks and status metrics (`total_assigned`, `picked_up`, `in_transit`, `out_for_delivery`, `delivered`).
+   - `GET /api/delivery/shipments`: List assigned shipments with optional status filter.
+   - `GET /api/delivery/shipments/<tracking_number>`: Detailed shipment & audit timeline view with BOLA assignment check (returns 404 and logs `UNAUTHORIZED_SHIPMENT_ACCESS` on cross-courier probing).
+   - `POST /api/delivery/shipments/<id>/status`: Courier status milestone progression (`Picked Up`, `In Transit`, `Out for Delivery`, `Delivered`). Enforces assignment verification, validates location/notes, locks terminal states (`Delivered`/`Cancelled`), and records each transition into the cryptographic chain of custody ledger via `add_status_update()`.
+
+2. **`src/backend/admin.py`**:
+   - `GET /api/admin/dashboard`: Platform operational telemetry, shipment counts by status, customer/courier breakdown, and recent security events.
+   - `GET /api/admin/shipments`: Paginated shipment browser joining customer and courier details.
+   - `GET /api/admin/delivery-persons`: Courier list for dispatch assignments.
+   - `POST /api/admin/shipments/<id>/assign`: Assigns a shipment to a verified delivery courier and logs the dispatch event in the cryptographic chain of custody.
+   - `POST /api/admin/shipments/<id>/cancel`: Administrative cancellation with chain of custody audit logging.
+   - `GET /api/admin/users`: User management with role filtering.
+   - `GET /api/admin/security-events`: Intrusion telemetry browser.
+
+3. **`src/backend/app.py`**:
+   - Registered `delivery_bp` and `admin_bp` blueprints.
+
+4. **Automated Test Suite**:
+   - Created `tests/test_delivery_and_admin.py` covering courier lifecycle transitions, chain of custody verification across all updates, cross-courier BOLA isolation, terminal status freeze, and admin courier assignment.
+   - 100% of 7 test suites passing across the entire repository.
+
+5. **Documentation & Git Sync**:
+   - Updated `docs/APPROACH.md` with Engineering Journal Entry 5 and marked Phase 3 as completed.
+   - Committed changes (commit SHA: 0eba9e8f2690fad77d705b7a18064faa7389439d) and pushed to GitHub main branch.
+
+Agent Response Summary:
+Built complete delivery person and admin modules in src/backend/delivery.py and src/backend/admin.py. Enforced strict BOLA checks, status transitions into the cryptographic ledger, and courier dispatch assignment. Verified all workflows with 100% passing tests and pushed commit 0eba9e8f2690fad77d705b7a18064faa7389439d to GitHub.
+
+Commit SHA:
+0eba9e8f2690fad77d705b7a18064faa7389439d
+
+Files Modified / Created:
+* docs/APPROACH.md (Modified)
+* docs/logs.txt (Modified)
+* src/backend/admin.py (Modified)
+* src/backend/app.py (Modified)
+* src/backend/delivery.py (Created)
+* tests/test_delivery_and_admin.py (Created)
+
+Actions Taken:
+* Created src/backend/delivery.py implementing courier dashboard, assigned tasks, and milestone updates.
+* Expanded src/backend/admin.py with system dashboard, all shipments view, courier assignment, and cancellation.
+* Registered delivery blueprint in src/backend/app.py.
+* Created automated test suite in tests/test_delivery_and_admin.py (all tests passing).
+* Updated docs/APPROACH.md with Engineering Journal Entry 5 and milestone statuses.
+* Staged, committed, and pushed commit 0eba9e8f2690fad77d705b7a18064faa7389439d to GitHub.
+* Appended turn entry to docs/logs.txt.
+
+================================================================================
+[2026-10-05T15:26:42+05:30] Live GPS Telemetry & Single-Use Ephemeral Tracking Links
+================================================================================
+User Prompt (verbatim):
+1
+
+Agent Response:
+Implemented the complete Live GPS Telemetry and Ephemeral Single-Use Secure Tracking Link system for high-value cargo:
+
+1. **Schema Enhancements (`src/backend/schema.sql`)**:
+   - `shipment_telemetry`: Stores live GPS stream (`latitude`, `longitude`, `speed_kmh`, `heading_degrees`, `battery_pct`, `timestamp`), linked to `shipment_id` and courier `recorded_by_id`.
+   - `tracking_tokens`: Stores ephemeral single-use access links. Uses `token_hash TEXT PRIMARY KEY` (SHA-256 digest), `expires_at`, `is_used`, `used_at`, and `used_ip`. Raw tokens are never stored in the database.
+
+2. **Customer Ephemeral Link Generation (`src/backend/shipments.py`)**:
+   - `POST /api/shipments/<id>/generate-tracking-link`: Customer can generate a single-use tracking link for high-value cargo with configurable TTL (5-60 minutes). Generates a 32-byte URL-safe cryptographic token (`secrets.token_urlsafe(32)`), computes SHA-256 digest, and stores the digest. Enforces customer ownership (returns 404 anti-probing on foreign shipments).
+   - `GET /api/shipments/<id>/telemetry`: Retrieves full GPS coordinate trail for shipment owner or admin.
+
+3. **Courier Live GPS Ingestion (`src/backend/delivery.py`)**:
+   - `POST /api/delivery/shipments/<id>/telemetry`: Assigned courier records GPS coordinates. Validates latitude (-90 to 90) and longitude (-180 to 180), numeric speed, heading, and battery levels. Rejects submissions for terminal states (`Delivered`, `Cancelled`). Enforces assignment isolation (returns 404 and logs `UNAUTHORIZED_SHIPMENT_ACCESS` on cross-courier attempts).
+
+4. **Public Single-Use Tracking Endpoint (`src/backend/tracking.py`)**:
+   - `GET /api/tracking/live/<token>`: Public endpoint requiring no login. Validates incoming token by computing SHA-256 digest. Enforces strict anti-replay protection by burning the token immediately (`is_used = 1`). Second access attempts return HTTP 410 Gone (`TOKEN_ALREADY_USED`) and log `REPLAY_ATTACK_DETECTED`. Expired tokens return HTTP 410 Gone (`TOKEN_EXPIRED`) and log `EXPIRED_TRACKING_TOKEN`. Returns shipment metadata, latest GPS coordinates, and milestone audit log.
+   - Registered `tracking_bp` in `src/backend/app.py`.
+
+5. **Automated Test Suite (`tests/test_gps_and_ephemeral_token.py`)**:
+   - Authored 9 test cases covering courier telemetry recording, cross-courier BOLA isolation, coordinate bounds validation, customer link generation, public access, single-use anti-replay burn, expired token rejection, tampered token rejection, and telemetry history isolation.
+   - Executed full test suite: all 16 tests pass across 4 test modules with 0 failures.
+
+6. **Documentation, ADRs & Git Sync**:
+   - Documented ADR-007 (Ephemeral Single-Use Hashed Tracking Links & GPS Telemetry Stream) and Engineering Journal Entry 6 in `docs/APPROACH.md`.
+   - Staged, committed, and pushed changes to GitHub repository.
+
+Agent Response Summary:
+Architected and implemented live GPS telemetry streaming and single-use ephemeral tracking links for high-value cargo. Stored tokens exclusively as SHA-256 hashes with automatic burn-on-first-view and anti-replay protection. Authored 9 automated tests in tests/test_gps_and_ephemeral_token.py (16/16 project tests passing) and synchronized documentation and Git repository.
+
+Commit SHA:
+820784757fc47e2cb0a1c4e56e19d8836a8dd621
+
+Files Modified / Created:
+* docs/APPROACH.md (Modified)
+* docs/logs.txt (Modified)
+* src/backend/app.py (Modified)
+* src/backend/delivery.py (Modified)
+* src/backend/schema.sql (Modified)
+* src/backend/shipments.py (Modified)
+* src/backend/tracking.py (Created)
+* tests/test_gps_and_ephemeral_token.py (Created)
+
+Actions Taken:
+* Added shipment_telemetry and tracking_tokens tables to src/backend/schema.sql.
+* Created src/backend/tracking.py implementing single-use burn-on-view live GPS tracking endpoint.
+* Added POST /api/shipments/<id>/generate-tracking-link and GET /api/shipments/<id>/telemetry to src/backend/shipments.py.
+* Added POST /api/delivery/shipments/<id>/telemetry to src/backend/delivery.py.
+* Registered tracking_bp in src/backend/app.py.
+* Authored and passed tests in tests/test_gps_and_ephemeral_token.py (16/16 tests passing).
+* Updated docs/APPROACH.md with ADR-007 and Journal Entry 6.
+* Staged and committed changes.

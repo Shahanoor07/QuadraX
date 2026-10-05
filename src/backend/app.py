@@ -15,12 +15,14 @@ try:
     from .shipments import shipments_bp
     from .delivery import delivery_bp
     from .admin import admin_bp
+    from .tracking import tracking_bp
 except (ImportError, ValueError):
     from db import close_db, init_db, query_db
     from auth import auth_bp
     from shipments import shipments_bp
     from delivery import delivery_bp
     from admin import admin_bp
+    from tracking import tracking_bp
 
 # Load environment variables if .env is present
 load_dotenv()
@@ -51,6 +53,7 @@ def create_app(test_config=None):
     app.register_blueprint(shipments_bp)
     app.register_blueprint(delivery_bp)
     app.register_blueprint(admin_bp)
+    app.register_blueprint(tracking_bp)
 
     # CLI Command to initialize database
     @app.cli.command("init-db")
