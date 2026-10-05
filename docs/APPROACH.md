@@ -1,8 +1,8 @@
 # Project Approach & Architecture — Build Secure 24
 
-**Team ID:** 
-**Project Name:** 
-**Team Size:** [2 or 4 Members]
+**Team ID:** 29
+**Project Name:** Quadrax
+**Team Size:** 4 Members
 **Primary Track / Domain:** 
 
 ---
