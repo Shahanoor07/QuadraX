@@ -30,7 +30,8 @@ load_dotenv()
 
 def create_app(test_config=None):
     """Application factory for ShipTrack."""
-    app = Flask(__name__, instance_relative_config=True)
+    frontend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend"))
+    app = Flask(__name__, instance_relative_config=True, static_folder=frontend_dir, static_url_path="")
 
     # Security configuration defaults
     app.config.from_mapping(
@@ -61,6 +62,13 @@ def create_app(test_config=None):
         """Clear existing data and create new tables."""
         init_db(app)
         print("Initialized the ShipTrack SQLite database successfully.")
+
+    # Serve frontend single-page application
+    @app.route("/", methods=["GET"])
+    def serve_frontend_index():
+        """Serve the frontend single-page dashboard."""
+        from flask import send_from_directory
+        return send_from_directory(frontend_dir, "index.html")
 
     # Base health & telemetry endpoint
     @app.route("/api/health", methods=["GET"])

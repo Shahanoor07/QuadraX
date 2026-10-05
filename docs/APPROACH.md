@@ -94,8 +94,8 @@ ShipTrack adopts a clean two-tier decoupled architecture:
 | **Phase 1: Foundation & Setup** | 0h – 4h | Onboarding, repo structure, SQLite schema (`users`, `shipments`, `status_updates`), `requirements.txt` | Schema constraint test & foreign key validation | `Completed` |
 | **Phase 2: Core Domain & Auth** | 4h – 10h | User registration/login (`werkzeug.security`), session auth, role decorators, seeding script | Auth test suite, rate limit check & password hash verification | `Completed` |
 | **Phase 3: Shipment Workflows** | 10h – 16h | Customer shipment creation, tracking lookup, courier dashboard, status update logging | BOLA/IDOR test, anti-probing 404 checks & ownership verification | `Completed` |
-| **Phase 4: Admin & UI Integration**| 16h – 20h | Admin management dashboard, shipment assignment, user management, frontend UI integration | Input escaping, cross-role access check & courier assignment audit | `In Progress` |
-| **Phase 5: Polish & Deployment**| 20h – 24h | End-to-end testing, live deployment, submission commit freeze | SAST scan & live health check | `Planned` |
+| **Phase 4: Admin & UI Integration**| 16h – 20h | Admin management dashboard, shipment assignment, user management, frontend UI integration | Input escaping, cross-role access check & courier assignment audit | `Completed` |
+| **Phase 5: Polish & Deployment**| 20h – 24h | End-to-end testing, live deployment, submission commit freeze | SAST scan & live health check | `In Progress` |
 
 ---
 
@@ -164,6 +164,15 @@ ShipTrack adopts a clean two-tier decoupled architecture:
 - **Decision & Rationale:** Generated 32-byte cryptographically secure random tokens (`secrets.token_urlsafe(32)`). Stored exclusively as SHA-256 digests in `tracking_tokens`. The endpoint `GET /api/tracking/live/<token>` burns the token on the very first access (`is_used = 1`), rendering replay attempts invalid (HTTP 410 Gone) and logging security alerts. Couriers stream live GPS coordinates into `shipment_telemetry` with coordinate boundary validation and assignment isolation.
 - **Security & Performance Trade-offs:** Complete mitigation of replay attacks and URL interception; raw tokens cannot be recovered even if the database is compromised.
 
+### ADR-008: Hand-Written Decoupled Frontend Architecture with Multi-Role State & Bootstrap 5
+- **Status:** Accepted
+- **Context:** Building a responsive, high-performance, and auditable user interface across Customer, Courier, and Admin personas without heavy external JavaScript frameworks or complex build step dependencies.
+- **Options Considered:**
+  1. Heavy Node.js framework with complex build dependencies
+  2. Hand-written vanilla JavaScript (ES6+), custom enterprise CSS system, and Bootstrap 5 CDN
+- **Decision & Rationale:** Selected hand-written plain HTML/CSS/JS with Bootstrap 5 via CDN. Provides zero-latency rendering, clean maintainability, immediate testability across any static or Flask environment, rich interactive features (HTML5 signature pad, multi-step creation wizard, visual stepper, AI floating assistant, print-ready receipts), and full alignment with competition constraints.
+- **Security & Performance Trade-offs:** Zero build tool vulnerabilities (CVEs), instant browser loading, and complete sanitization of client-side DOM insertions.
+
 ---
 
 ## 5. Engineering Journal & Real-Time Decision Log
@@ -198,6 +207,17 @@ ShipTrack adopts a clean two-tier decoupled architecture:
 - **Key Challenges:** Protecting against replay attacks and token interception while maintaining zero-knowledge token storage.
 - **Resolution:** Raw tokens are never persisted to the database; incoming tokens are checked via SHA-256 digests and immediately burned (`is_used = 1`). Replays return HTTP 410 Gone and log `REPLAY_ATTACK_DETECTED`. Created 9 comprehensive automated tests in `tests/test_gps_and_ephemeral_token.py`, achieving 16/16 test passes across the entire test suite.
 
+### 2026-10-05 19:00 IST — Entry 7: Multi-Role Enterprise Frontend Implementation & Integration
+- **Focus:** Built the complete responsive frontend (`src/frontend/`) by hand using HTML5, CSS3, JavaScript (ES6+), and Bootstrap 5 via CDN. Implemented:
+  1. Top Navbar with interactive Role Switcher (Customer, Delivery Partner, Admin), quick global tracking search (`Ctrl+K`), system notifications bell, and user avatar profile dropdown.
+  2. Customer Portal: Metrics cards, 4-step shipment creation wizard (Addresses, Package specs, Service tier with dynamic price calculation, Review & instant tracking card generation), interactive visual status stepper, driver details card with portrait, live GPS map simulation with coordinate readout, cryptographic chain of custody audit box (`/api/shipments/<id>/verify`), and filterable history table with receipt download and cancellation.
+  3. Delivery-Person Portal: Today's deliveries metrics, online/offline availability switch, route-priority sorted task cards, milestone progression buttons, live GPS telemetry ping simulation, and delivery confirmation modal with recipient 6-digit OTP verification and HTML5 canvas signature pad.
+  4. Admin Management Portal: Platform KPIs, unassigned shipments dispatch board with driver assignment modal, all shipments browser, active drivers roster, and security events intrusion telemetry table.
+  5. Floating AI Shipment Assistant Widget: Expandable chat popover with preset pills, intelligent query matching, and live package status chips inside the chat.
+  6. Printable Shipping Receipt Modal: Formatted waybill with barcode simulation and print-to-PDF support.
+- **Key Challenges:** Ensuring rich mock data renders immediately while allowing seamless backend connectivity and responsive mobile layouts.
+- **Resolution:** Authored decoupled `mockData.js` and `app.js` with comprehensive state management and connected Flask root routing (`/`) directly to `src/frontend/index.html`. Verified 100% test pass rate and asset retrieval.
+
 ---
 
 ## 6. Testing, Security Verification & Deployment Record
@@ -208,6 +228,7 @@ ShipTrack adopts a clean two-tier decoupled architecture:
   - Cryptographic chain of custody, database tampering detection, security event logging, and admin telemetry (`tests/test_security_foundation.py`)
   - Delivery person lifecycle transitions, terminal state protection, courier assignment, and admin operations (`tests/test_delivery_and_admin.py`)
   - Live GPS coordinate ingestion, single-use token burn, replay attack prevention, and expiration controls (`tests/test_gps_and_ephemeral_token.py`)
+- **Frontend Verification:** Validated asset serving (`GET /`, `GET /css/styles.css`, `GET /js/app.js`, `GET /js/mockData.js`) with 100% HTTP 200 responses.
 - **Security Check:** Zero hardcoded credentials, parameterized queries on all endpoints, anti-enumeration generic auth responses, rate limit lockouts, and HttpOnly/SameSite cookies.
 
 ### 6.2 Deployment Verification
