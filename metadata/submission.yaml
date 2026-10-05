@@ -5,7 +5,7 @@ version: "1.0"
 
 submission:
   team_id: "29"
-  repository: ""
+  repository: "https://github.com/Shahanoor07/QuadraX"
   commit_sha: ""
   deployment_url: ""
   submitted_at: ""

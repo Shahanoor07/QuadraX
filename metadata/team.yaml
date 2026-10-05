@@ -5,15 +5,15 @@
 
 team:
   team_id: "29"
-  name: ""
-  repository: "" # URL of the newly created GitHub repository for this project
+  name: "Quadrax"
+  repository: "https://github.com/Shahanoor07/QuadraX" # URL of the newly created GitHub repository for this project
 
 members:
-  - name: ""
-    email: ""
-  - name: ""
-    email: ""
-  - name: ""
-    email: ""
-  - name: ""
-    email: ""
+  - name: "Shaikh Shahanoor Alli"
+    email: "shaikhshahanooralli07@gmail.com"
+  - name: "S.Sahithi"
+    email: "sahithisandepogu5@gmail.com"
+  - name: "B.Varshitha"
+    email: "bandisrivarshithabandi@gmail.com"
+  - name: "M.Varshini"
+    email: "Varshinim9912@gmail.com"
