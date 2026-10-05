@@ -5,13 +5,16 @@ Configured with SQLite, parameterized query helpers, and secure defaults.
 """
 
 import os
+from datetime import timedelta
 from flask import Flask, jsonify
 from dotenv import load_dotenv
 
 try:
     from .db import close_db, init_db, query_db
+    from .auth import auth_bp
 except (ImportError, ValueError):
     from db import close_db, init_db, query_db
+    from auth import auth_bp
 
 # Load environment variables if .env is present
 load_dotenv()
@@ -21,10 +24,14 @@ def create_app(test_config=None):
     """Application factory for ShipTrack."""
     app = Flask(__name__, instance_relative_config=True)
 
-    # Configuration defaults
+    # Security configuration defaults
     app.config.from_mapping(
         SECRET_KEY=os.environ.get("SECRET_KEY", "dev-secure-key-change-in-production"),
         DATABASE=os.path.join(os.path.dirname(__file__), "shiptrack.db"),
+        SESSION_COOKIE_HTTPONLY=True,
+        SESSION_COOKIE_SAMESITE="Lax",
+        SESSION_COOKIE_SECURE=os.environ.get("FLASK_ENV") == "production",
+        PERMANENT_SESSION_LIFETIME=timedelta(days=1),
     )
 
     if test_config is not None:
@@ -32,6 +39,9 @@ def create_app(test_config=None):
 
     # Register database teardown
     app.teardown_appcontext(close_db)
+
+    # Register blueprints
+    app.register_blueprint(auth_bp)
 
     # CLI Command to initialize database
     @app.cli.command("init-db")

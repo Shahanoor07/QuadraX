@@ -2,26 +2,34 @@
 
 All database operations enforce parameterized SQL queries to prevent SQL injection.
 Foreign key constraints are strictly enabled on every connection.
+Supports both Flask application context and standalone execution.
 """
 
 import os
 import sqlite3
-from flask import g, current_app
+from flask import g, current_app, has_app_context
 
 DEFAULT_DB_PATH = os.path.join(os.path.dirname(__file__), "shiptrack.db")
 
 
 def get_db():
-    """Retrieve or create an SQLite database connection for the current request context."""
-    db_path = current_app.config.get("DATABASE", DEFAULT_DB_PATH) if current_app else DEFAULT_DB_PATH
+    """Retrieve or create an SQLite database connection.
 
+    Uses Flask's application context `g` if active, otherwise returns a standalone connection.
+    """
+    if not has_app_context():
+        conn = sqlite3.connect(DEFAULT_DB_PATH, detect_types=sqlite3.PARSE_DECLTYPES)
+        conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA foreign_keys = ON;")
+        return conn
+
+    db_path = current_app.config.get("DATABASE", DEFAULT_DB_PATH)
     if "db" not in g:
         g.db = sqlite3.connect(
             db_path,
             detect_types=sqlite3.PARSE_DECLTYPES
         )
         g.db.row_factory = sqlite3.Row
-        # Enforce foreign key constraints
         g.db.execute("PRAGMA foreign_keys = ON;")
 
     return g.db
@@ -29,14 +37,21 @@ def get_db():
 
 def close_db(e=None):
     """Close the database connection if open at end of request."""
-    db = g.pop("db", None)
-    if db is not None:
-        db.close()
+    if has_app_context():
+        db = g.pop("db", None)
+        if db is not None:
+            db.close()
 
 
 def init_db(app=None):
     """Initialize database tables and indexes from schema.sql."""
-    db_path = app.config.get("DATABASE", DEFAULT_DB_PATH) if app else DEFAULT_DB_PATH
+    if app:
+        db_path = app.config.get("DATABASE", DEFAULT_DB_PATH)
+    elif has_app_context():
+        db_path = current_app.config.get("DATABASE", DEFAULT_DB_PATH)
+    else:
+        db_path = DEFAULT_DB_PATH
+
     schema_path = os.path.join(os.path.dirname(__file__), "schema.sql")
 
     conn = sqlite3.connect(db_path)
@@ -55,9 +70,12 @@ def query_db(query: str, args: tuple = (), one: bool = False):
         args: Tuple of parameters matching the placeholders.
         one: If True, return only the first row or None.
     """
-    cur = get_db().execute(query, args)
+    db = get_db()
+    cur = db.execute(query, args)
     rv = cur.fetchall()
     cur.close()
+    if not has_app_context():
+        db.close()
     return (rv[0] if rv else None) if one else rv
 
 
@@ -76,4 +94,6 @@ def execute_db(query: str, args: tuple = ()) -> int:
     db.commit()
     last_id = cur.lastrowid
     cur.close()
+    if not has_app_context():
+        db.close()
     return last_id

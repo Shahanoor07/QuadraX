@@ -92,7 +92,7 @@ ShipTrack adopts a clean two-tier decoupled architecture:
 | Milestone / Phase | Time Window | Key Objectives & Deliverables | Security Verification | Status |
 |---|---|---|---|---|
 | **Phase 1: Foundation & Setup** | 0h – 4h | Onboarding, repo structure, SQLite schema (`users`, `shipments`, `status_updates`), `requirements.txt` | Schema constraint test & foreign key validation | `Completed` |
-| **Phase 2: Core Domain & Auth** | 4h – 10h | User registration/login (`werkzeug.security`), session auth, role decorators | Auth test suite & password hash verification | `Planned` |
+| **Phase 2: Core Domain & Auth** | 4h – 10h | User registration/login (`werkzeug.security`), session auth, role decorators, seeding script | Auth test suite, rate limit check & password hash verification | `Completed` |
 | **Phase 3: Shipment Workflows** | 10h – 16h | Shipment creation, tracking lookup, courier dashboard, status update logging | BOLA/IDOR test & role boundary check | `Planned` |
 | **Phase 4: Admin & UI Integration**| 16h – 20h | Admin management dashboard, frontend integration with Bootstrap CDN | Input escaping & cross-role access check | `Planned` |
 | **Phase 5: Polish & Deployment**| 20h – 24h | End-to-end testing, live deployment, submission commit freeze | SAST scan & live health check | `Planned` |
@@ -119,6 +119,15 @@ ShipTrack adopts a clean two-tier decoupled architecture:
 - **Decision & Rationale:** `werkzeug.security` is bundled with Flask, implements industry-standard salted hashing, and provides timing-attack resistant verification (`check_password_hash`).
 - **Security & Performance Trade-offs:** Excellent resistance against offline brute-force and rainbow table attacks.
 
+### ADR-003: Rate Limiting and Anti-Enumeration for Authentication
+- **Status:** Accepted
+- **Context:** Protect the application against brute-force password guessing and username enumeration attacks.
+- **Options Considered:**
+  1. Distinct error messages ("User not found" vs "Wrong password")
+  2. Uniform generic error responses combined with IP/Identifier failure window throttling
+- **Decision & Rationale:** Used identical generic error messages for all failed login attempts, preventing username harvesting. Enforced a lockout threshold of 5 failures per 5-minute window with a 15-minute cooldown.
+- **Security & Performance Trade-offs:** Drastically improves attack resistance with negligible overhead.
+
 ---
 
 ## 5. Engineering Journal & Real-Time Decision Log
@@ -127,6 +136,11 @@ ShipTrack adopts a clean two-tier decoupled architecture:
 - **Focus:** Initialized PS-05 ShipTrack project architecture. Created SQLite schema defining `users`, `shipments`, and `status_updates` tables with comprehensive indexes and foreign keys.
 - **Key Challenges:** Ensuring foreign key constraints are honored in SQLite (SQLite disables them by default).
 - **Resolution:** Explicitly configured `PRAGMA foreign_keys = ON;` in `schema.sql` and `db.py` connection factory.
+
+### 2026-10-05 13:25 IST — Entry 2: Secure Authentication & Role Authorization Scaffolding
+- **Focus:** Implemented customer registration with enforced role restriction, login, session management, logout, and `/api/auth/me`. Implemented `login_required` and `role_required` decorators. Created test seeding script (`seed.py`) with zero hardcoded passwords.
+- **Key Challenges:** Ensuring cookies are tamper-proof and resilient against client-side script hijacking while allowing standard browsers to handle CSRF.
+- **Resolution:** Configured `HttpOnly=True` and `SameSite=Lax` on Flask session cookies with environment-derived `SECRET_KEY`. Verified via unit tests with 100% pass rate.
 
 ---
 
