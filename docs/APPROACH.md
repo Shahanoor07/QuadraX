@@ -226,17 +226,23 @@ ShipTrack adopts a clean two-tier decoupled architecture:
 - **Key Challenges:** Enforcing strict client-side DOM XSS sanitization while supporting full customer, courier, and admin operations.
 - **Resolution:** Implemented pure DOM `textContent` rendering for all server and user data. Authentication check on startup (`GET /api/auth/me`) directs unauthenticated users to Login/Register and unhides only the dashboard corresponding to the server-verified role. Added `gunicorn` to `requirements.txt`, made Flask auto-create SQLite tables on startup if missing, and auto-seed admin and courier accounts from environment variables (`ADMIN_PASSWORD`, `DELIVERY_PASSWORD`). Authored `tests/test_e2e_frontend_api.py` covering the complete end-to-end user lifecycle. Verified 100% pass rate (19/19 tests) across all 5 test modules.
 
+### 2026-10-06 10:50 IST — Entry 9: Render Zero-Shell Startup Auto-Seeding & Account Provisioning
+- **Focus:** Enabled zero-shell account provisioning on cloud platforms (e.g. Render) without requiring SSH/CLI execution.
+- **Key Challenges:** Ensuring the web app initializes SQLite database tables idempotently and auto-creates both Admin and Delivery Courier accounts directly from `ADMIN_PASSWORD` and `DELIVERY_PASSWORD` environment variables if they do not exist.
+- **Resolution:** Refactored `src/backend/app.py` startup routine to guarantee `init_db(app)` execution and perform parameterized lookups for `username` and `email` identifiers, securely hashing passwords using `werkzeug.security.generate_password_hash`. Documented exact login identifiers (`admin` / `admin@shiptrack.local`, `courier_agent1` / `courier1@shiptrack.local`). Created `tests/test_startup_seed.py` and validated 100% pass rate (20/20 tests across 6 test suites).
+
 ---
 
 ## 6. Testing, Security Verification & Deployment Record
 
 ### 6.1 Testing & Security Verification Strategy
-- **Unit & Security Test Suite:** 100% passing automated test suite (19 tests across 5 test modules, 0 failures):
+- **Unit & Security Test Suite:** 100% passing automated test suite (20 tests across 6 test modules, 0 failures):
   - Customer shipment isolation, input validation, and BOLA prevention (`tests/test_customer_shipments.py`)
   - Cryptographic chain of custody, database tampering detection, security event logging, and admin telemetry (`tests/test_security_foundation.py`)
   - Delivery person lifecycle transitions, terminal state protection, courier assignment, and admin operations (`tests/test_delivery_and_admin.py`)
   - Live GPS coordinate ingestion, single-use token burn, replay attack prevention, and expiration controls (`tests/test_gps_and_ephemeral_token.py`)
   - End-to-end frontend authentication, shipment creation, lifecycle progression, 1-time token burn, and asset serving (`tests/test_e2e_frontend_api.py`)
+  - Zero-shell environment startup auto-seeding and multi-identifier login verification (`tests/test_startup_seed.py`)
 - **Frontend Verification:** Validated asset serving (`GET /`, `GET /css/styles.css`, `GET /js/app.js` return 200; `GET /js/mockData.js` returns 404).
 - **Security Check:** Zero hardcoded credentials, zero localStorage token/password storage, strict textContent DOM assignment, parameterized SQL on all endpoints, anti-enumeration generic auth responses, rate limit lockouts, and HttpOnly/SameSite cookies.
 
@@ -244,3 +250,4 @@ ShipTrack adopts a clean two-tier decoupled architecture:
 - **Target Platform:** Cloud Deployment (e.g. Render / Railway / PythonAnywhere)
 - **Deployment URL:** *Pending deployment phase*
 - **Health Check Endpoint:** `/api/health`
+

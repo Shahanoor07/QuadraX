@@ -804,3 +804,46 @@ Actions Taken:
 * Created deployment/README.md with production setup instructions.
 * Created tests/test_e2e_frontend_api.py and executed pytest (19/19 tests passed).
 * Updated docs/APPROACH.md with ADR-009 and Journal Entry 8.
+
+================================================================================
+[2026-10-06T10:54:15+05:30] Startup Auto-Seeding from Environment Variables for Zero-Shell Deployments
+================================================================================
+User Prompt (verbatim):
+Urgent. Tell me the exact login identifiers (username and email) seeded for the admin and the delivery person (do not print passwords). Then make the app create both accounts automatically at startup from the ADMIN_PASSWORD and DELIVERY_PASSWORD environment variables if they don't exist, so it works on Render without a shell.
+
+Agent Response:
+Provided the exact login identifiers for both seeded roles:
+- Admin:
+  - Username: `admin` (configurable via `ADMIN_USERNAME`)
+  - Email: `admin@shiptrack.local` (configurable via `ADMIN_EMAIL`)
+  - Can log in using either `admin` or `admin@shiptrack.local` into the username/email login input.
+- Delivery Person (Courier):
+  - Username: `courier_agent1` (configurable via `DELIVERY_USERNAME`)
+  - Email: `courier1@shiptrack.local` (configurable via `DELIVERY_EMAIL`)
+  - Can log in using either `courier_agent1` or `courier1@shiptrack.local` into the username/email login input.
+
+Refactored `src/backend/app.py` so that during application startup in `create_app()`:
+1. `init_db(app)` is automatically and idempotently executed on launch, ensuring SQLite tables and indices exist even on fresh hosting environments like Render without shell access.
+2. If `ADMIN_PASSWORD` is present in environment variables, the system queries for existing accounts with username `admin` or email `admin@shiptrack.local`. If absent, it automatically inserts the user with role `admin` and a securely hashed password via `werkzeug.security.generate_password_hash`.
+3. If `DELIVERY_PASSWORD` is present in environment variables, the system queries for existing accounts with username `courier_agent1` or email `courier1@shiptrack.local`. If absent, it automatically inserts the user with role `delivery_person` and a securely hashed password.
+4. Added dedicated automated test `tests/test_startup_seed.py` validating that startup creates both accounts from env vars and supports logging in via either username or email. Verified 100% test pass rate (20/20 tests passing).
+5. Updated `deployment/README.md` and `docs/APPROACH.md` with operational guidance.
+
+Agent Response Summary:
+Communicated the exact login usernames and emails for both Admin and Delivery Courier accounts without exposing passwords. Updated Flask application startup in src/backend/app.py to guarantee database initialization and auto-creation of both accounts from ADMIN_PASSWORD and DELIVERY_PASSWORD environment variables when deployed without shell access. Verified with automated test suite (20/20 tests passing).
+
+Commit SHA:
+PENDING_COMMIT_SHA
+
+Files Modified / Created:
+* deployment/README.md (Modified)
+* docs/APPROACH.md (Modified)
+* docs/logs.txt (Modified)
+* src/backend/app.py (Modified)
+* tests/test_startup_seed.py (Created)
+
+Actions Taken:
+* Refactored src/backend/app.py startup routine to execute init_db and check/insert admin and courier accounts from environment variables.
+* Updated deployment/README.md detailing exact login identifiers.
+* Created tests/test_startup_seed.py and executed pytest (20/20 tests passed).
+* Updated docs/APPROACH.md with Journal Entry 9 and updated testing metrics.

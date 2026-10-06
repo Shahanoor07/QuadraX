@@ -58,36 +58,47 @@ def create_app(test_config=None):
     app.register_blueprint(admin_bp)
     app.register_blueprint(tracking_bp)
 
-    # Auto-initialize database tables on startup if missing
+    # Auto-initialize database tables and seed default accounts on startup
     db_path = app.config.get("DATABASE")
     if db_path and db_path != ":memory:":
-        if not os.path.exists(db_path) or os.path.getsize(db_path) == 0:
-            with app.app_context():
-                init_db(app)
-
-    # Auto-seed default accounts on startup if passwords provided in environment
-    admin_pw = os.environ.get("ADMIN_PASSWORD")
-    delivery_pw = os.environ.get("DELIVERY_PASSWORD")
-    if (admin_pw or delivery_pw) and db_path and db_path != ":memory:":
         with app.app_context():
+            # 1. Guarantee schema tables and indexes exist
+            db_dir = os.path.dirname(os.path.abspath(db_path))
+            if db_dir:
+                os.makedirs(db_dir, exist_ok=True)
+            init_db(app)
+
+            # 2. Auto-seed Admin account if ADMIN_PASSWORD is set and account does not exist
+            admin_pw = os.environ.get("ADMIN_PASSWORD")
             if admin_pw:
-                existing_admin = query_db("SELECT id FROM users WHERE role = 'admin' LIMIT 1", one=True)
+                admin_user = os.environ.get("ADMIN_USERNAME", "admin").strip()
+                admin_mail = os.environ.get("ADMIN_EMAIL", "admin@shiptrack.local").strip().lower()
+                admin_name = os.environ.get("ADMIN_NAME", "System Administrator").strip()
+                existing_admin = query_db(
+                    "SELECT id FROM users WHERE username = ? OR email = ?",
+                    (admin_user, admin_mail),
+                    one=True
+                )
                 if not existing_admin:
-                    admin_user = os.environ.get("ADMIN_USERNAME", "admin").strip()
-                    admin_mail = os.environ.get("ADMIN_EMAIL", "admin@shiptrack.local").strip().lower()
-                    admin_name = os.environ.get("ADMIN_NAME", "System Administrator").strip()
                     execute_db(
                         """INSERT INTO users (username, email, password_hash, role, full_name)
                            VALUES (?, ?, ?, 'admin', ?)""",
                         (admin_user, admin_mail, generate_password_hash(admin_pw), admin_name)
                     )
+
+            # 3. Auto-seed Delivery Person account if DELIVERY_PASSWORD is set and account does not exist
+            delivery_pw = os.environ.get("DELIVERY_PASSWORD")
             if delivery_pw:
-                existing_courier = query_db("SELECT id FROM users WHERE role = 'delivery_person' LIMIT 1", one=True)
+                courier_user = os.environ.get("DELIVERY_USERNAME", "courier_agent1").strip()
+                courier_mail = os.environ.get("DELIVERY_EMAIL", "courier1@shiptrack.local").strip().lower()
+                courier_name = os.environ.get("DELIVERY_NAME", "Courier Agent One").strip()
+                courier_phone = os.environ.get("DELIVERY_PHONE", "+91 9876543210").strip()
+                existing_courier = query_db(
+                    "SELECT id FROM users WHERE username = ? OR email = ?",
+                    (courier_user, courier_mail),
+                    one=True
+                )
                 if not existing_courier:
-                    courier_user = os.environ.get("DELIVERY_USERNAME", "courier_agent1").strip()
-                    courier_mail = os.environ.get("DELIVERY_EMAIL", "courier1@shiptrack.local").strip().lower()
-                    courier_name = os.environ.get("DELIVERY_NAME", "Courier Agent One").strip()
-                    courier_phone = os.environ.get("DELIVERY_PHONE", "+91 9876543210").strip()
                     execute_db(
                         """INSERT INTO users (username, email, password_hash, role, full_name, phone)
                            VALUES (?, ?, ?, 'delivery_person', ?, ?)""",

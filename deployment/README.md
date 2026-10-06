@@ -12,9 +12,15 @@ This directory contains the production deployment configuration, runner commands
 - **Hosting Platform:** Python WSGI (Gunicorn) / Flask
 - **Primary Repository:** [https://github.com/Shahanoor07/QuadraX](https://github.com/Shahanoor07/QuadraX)
 - **Default Seed Accounts:**
-  - Admin: `admin@shiptrack.com` (password configured via `ADMIN_PASSWORD`)
-  - Delivery Courier: `courier@shiptrack.com` (password configured via `DELIVERY_PASSWORD`)
-  - Customer: Register directly via public sign-up at `/` or test with existing seeded accounts.
+  - **Admin**:
+    - Username: `admin` (or `ADMIN_USERNAME`)
+    - Email: `admin@shiptrack.local` (or `ADMIN_EMAIL`)
+    - Password: Set via `ADMIN_PASSWORD` environment variable (auto-created on startup)
+  - **Delivery Courier**:
+    - Username: `courier_agent1` (or `DELIVERY_USERNAME`)
+    - Email: `courier1@shiptrack.local` (or `DELIVERY_EMAIL`)
+    - Password: Set via `DELIVERY_PASSWORD` environment variable (auto-created on startup)
+  - **Customer**: Register directly via public sign-up at `/` or test with existing customer accounts.
 
 ---
 
