@@ -876,7 +876,7 @@ Agent Response Summary:
 Added automatic provisioning for a second delivery courier account (`courier_agent2` / `courier2@shiptrack.local`) controlled by the new `COURIER2_PASSWORD` environment variable. Updated startup initialization in app.py, seed script in seed.py, deployment documentation, and automated tests. Verified all 20 test suites passing.
 
 Commit SHA:
-PENDING_COMMIT_SHA
+e55fe3fb1a653f83cffb8b66ec77e1e67a9c00a3
 
 Files Modified / Created:
 * deployment/README.md (Modified)
