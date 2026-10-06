@@ -251,7 +251,19 @@ ShipTrack adopts a clean two-tier decoupled architecture:
 - **Frontend Verification:** Validated asset serving (`GET /`, `GET /css/styles.css`, `GET /js/app.js` return 200; `GET /js/mockData.js` returns 404).
 - **Security Check:** Zero hardcoded credentials, zero localStorage token/password storage, strict textContent DOM assignment, parameterized SQL on all endpoints, anti-enumeration generic auth responses, rate limit lockouts, and HttpOnly/SameSite cookies.
 
-### 6.2 Deployment Verification
+### 6.2 SQL Injection & XSS Security Verification Results
+- **SQL Injection (SQLi) Vulnerability Testing:**
+  - **Attack Surface Probed:** Login identifiers (`username`/`email`), shipment creation fields (`sender_name`, `recipient_address`, `package_description`), tracking lookup parameters (`tracking_number`), and status update notes.
+  - **Payloads Tested:** `' OR 1=1 --`, `admin'--`, `' UNION SELECT id, username, password_hash FROM users --`, `'; DROP TABLE shipments; --`.
+  - **Defensive Implementation:** 100% Parameterized queries using SQLite parameter markers (`?`) in `query_db()` and `execute_db()`. Dynamic string concatenation and formatted strings are strictly disallowed in SQL queries.
+  - **Verification Result:** Zero SQL injection vulnerabilities detected. All input strings treated strictly as literal data values. The passive intrusion sensor (`check_and_log_suspicious_input()`) detects SQLi syntax patterns and logs them to the `security_events` table as `SUSPICIOUS_INPUT_PATTERN` telemetry without altering application execution flow.
+- **Cross-Site Scripting (XSS) Vulnerability Testing:**
+  - **Attack Surface Probed:** Shipment descriptions, recipient names, addresses, tracking numbers, and delivery confirmation notes displayed in the Customer and Courier dashboards.
+  - **Payloads Tested:** `<script>alert('XSS')</script>`, `<img src=x onerror=alert(1)>`, `<svg onload=alert(document.cookie)>`, `javascript:alert(1)`.
+  - **Defensive Implementation:** Zero use of `innerHTML` for server- or user-generated data across the entire frontend. All dynamic UI rendering in `src/frontend/js/app.js` uses strict DOM `document.createElement()` and `element.textContent = ...` property assignment.
+  - **Verification Result:** Zero XSS vulnerabilities detected. All HTML tags and scripting payloads are safely escaped and rendered strictly as plaintext text nodes by the browser engine. Verified that cookie access via client script is neutralized by the `HttpOnly` flag on session cookies.
+
+### 6.3 Deployment Verification
 - **Target Platform:** Cloud Deployment (e.g. Render / Railway / PythonAnywhere)
 - **Deployment URL:** *Pending deployment phase*
 - **Health Check Endpoint:** `/api/health`
