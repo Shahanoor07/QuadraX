@@ -105,6 +105,25 @@ def create_app(test_config=None):
                         (courier_user, courier_mail, generate_password_hash(delivery_pw), courier_name, courier_phone)
                     )
 
+            # 4. Auto-seed Second Delivery Person account if COURIER2_PASSWORD is set and account does not exist
+            courier2_pw = os.environ.get("COURIER2_PASSWORD")
+            if courier2_pw:
+                courier2_user = os.environ.get("COURIER2_USERNAME", "courier_agent2").strip()
+                courier2_mail = os.environ.get("COURIER2_EMAIL", "courier2@shiptrack.local").strip().lower()
+                courier2_name = os.environ.get("COURIER2_NAME", "Courier Agent Two").strip()
+                courier2_phone = os.environ.get("COURIER2_PHONE", "+91 9876543211").strip()
+                existing_courier2 = query_db(
+                    "SELECT id FROM users WHERE username = ? OR email = ?",
+                    (courier2_user, courier2_mail),
+                    one=True
+                )
+                if not existing_courier2:
+                    execute_db(
+                        """INSERT INTO users (username, email, password_hash, role, full_name, phone)
+                           VALUES (?, ?, ?, 'delivery_person', ?, ?)""",
+                        (courier2_user, courier2_mail, generate_password_hash(courier2_pw), courier2_name, courier2_phone)
+                    )
+
     # CLI Command to initialize database
     @app.cli.command("init-db")
     def init_db_command():

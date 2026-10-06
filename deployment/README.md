@@ -16,10 +16,14 @@ This directory contains the production deployment configuration, runner commands
     - Username: `admin` (or `ADMIN_USERNAME`)
     - Email: `admin@shiptrack.local` (or `ADMIN_EMAIL`)
     - Password: Set via `ADMIN_PASSWORD` environment variable (auto-created on startup)
-  - **Delivery Courier**:
+  - **Delivery Courier 1**:
     - Username: `courier_agent1` (or `DELIVERY_USERNAME`)
     - Email: `courier1@shiptrack.local` (or `DELIVERY_EMAIL`)
     - Password: Set via `DELIVERY_PASSWORD` environment variable (auto-created on startup)
+  - **Delivery Courier 2**:
+    - Username: `courier_agent2` (or `COURIER2_USERNAME`)
+    - Email: `courier2@shiptrack.local` (or `COURIER2_EMAIL`)
+    - Password: Set via `COURIER2_PASSWORD` environment variable (auto-created on startup)
   - **Customer**: Register directly via public sign-up at `/` or test with existing customer accounts.
 
 ---
@@ -29,8 +33,9 @@ This directory contains the production deployment configuration, runner commands
 | Variable Name | Description | Required | Default |
 |---------------|-------------|----------|---------|
 | `SECRET_KEY` | Cryptographic key used to sign secure session cookies (`HttpOnly`, `SameSite=Lax`). | Recommended | Auto-generated random 32-byte hex if omitted |
-| `ADMIN_PASSWORD` | Password for initializing the default `admin@shiptrack.com` user on startup. | Optional | `AdminSecurePass123!` |
-| `DELIVERY_PASSWORD` | Password for initializing the default `courier@shiptrack.com` user on startup. | Optional | `CourierSecurePass123!` |
+| `ADMIN_PASSWORD` | Password for initializing the default `admin@shiptrack.local` user on startup. | Optional | `AdminSecurePass123!` |
+| `DELIVERY_PASSWORD` | Password for initializing `courier_agent1` (`courier1@shiptrack.local`) on startup. | Optional | `CourierSecurePass123!` |
+| `COURIER2_PASSWORD` | Password for initializing `courier_agent2` (`courier2@shiptrack.local`) on startup. | Optional | None |
 | `FLASK_DATABASE_PATH` | Path to the SQLite database file. | Optional | `src/backend/shiptrack.db` |
 | `PORT` | Listening port for web server. | Optional | `5000` |
 

@@ -847,3 +847,48 @@ Actions Taken:
 * Updated deployment/README.md detailing exact login identifiers.
 * Created tests/test_startup_seed.py and executed pytest (20/20 tests passed).
 * Updated docs/APPROACH.md with Journal Entry 9 and updated testing metrics.
+
+================================================================================
+[2026-10-06T11:39:28+05:30] Add Second Delivery Courier Auto-Seeded via COURIER2_PASSWORD
+================================================================================
+User Prompt (verbatim):
+"Add a second delivery courier account, courier_agent2, seeded the same way as courier_agent1, using a new COURIER2_PASSWORD environment variable.
+
+Agent Response:
+Configured automatic seeding and account provisioning for a second delivery courier (`courier_agent2`):
+1. Application Startup Auto-Seed (`src/backend/app.py`):
+   - Added checking and provisioning for `courier_agent2` in `create_app()` using the new `COURIER2_PASSWORD` environment variable.
+   - Default login identifiers:
+     - Username: `courier_agent2` (configurable via `COURIER2_USERNAME`)
+     - Email: `courier2@shiptrack.local` (configurable via `COURIER2_EMAIL`)
+     - Full Name: `Courier Agent Two`
+     - Phone: `+91 9876543211`
+   - Checks if an account with `username = 'courier_agent2' OR email = 'courier2@shiptrack.local'` exists via parameterized SQL; if absent, securely inserts the courier record with role `delivery_person` and hashed password (`werkzeug.security.generate_password_hash`).
+2. Seeding Utility (`src/backend/seed.py`):
+   - Added support for seeding or updating `courier_agent2` when `COURIER2_PASSWORD` is supplied.
+3. Automated Testing (`tests/test_startup_seed.py`):
+   - Added end-to-end assertions verifying that setting `COURIER2_PASSWORD` creates `courier_agent2` at startup, and that authentication succeeds using both the username (`courier_agent2`) and email (`courier2@shiptrack.local`).
+   - Ran all 20 tests across the test suite; 100% pass rate achieved in 30.49s.
+4. Operational Documentation:
+   - Updated `deployment/README.md` and `docs/APPROACH.md` (Journal Entry 10) documenting the `COURIER2_PASSWORD` configuration key.
+
+Agent Response Summary:
+Added automatic provisioning for a second delivery courier account (`courier_agent2` / `courier2@shiptrack.local`) controlled by the new `COURIER2_PASSWORD` environment variable. Updated startup initialization in app.py, seed script in seed.py, deployment documentation, and automated tests. Verified all 20 test suites passing.
+
+Commit SHA:
+PENDING_COMMIT_SHA
+
+Files Modified / Created:
+* deployment/README.md (Modified)
+* docs/APPROACH.md (Modified)
+* docs/logs.txt (Modified)
+* src/backend/app.py (Modified)
+* src/backend/seed.py (Modified)
+* tests/test_startup_seed.py (Modified)
+
+Actions Taken:
+* Modified src/backend/app.py to read COURIER2_PASSWORD and auto-seed courier_agent2.
+* Modified src/backend/seed.py to support COURIER2_PASSWORD.
+* Updated tests/test_startup_seed.py to verify courier_agent2 login by username and email.
+* Executed pytest across the full repository (20/20 tests passed).
+* Updated deployment/README.md and docs/APPROACH.md with operational documentation.

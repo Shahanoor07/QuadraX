@@ -96,6 +96,34 @@ def seed():
         )
         print(f"[OK] Delivery user '{delivery_username}' created (ID: {delivery_id}).")
 
+    # 3. Optionally Seed or Update Second Delivery Person Account (courier_agent2)
+    courier2_password = os.environ.get("COURIER2_PASSWORD")
+    if courier2_password:
+        courier2_username = os.environ.get("COURIER2_USERNAME", "courier_agent2").strip()
+        courier2_email = os.environ.get("COURIER2_EMAIL", "courier2@shiptrack.local").strip().lower()
+        courier2_name = os.environ.get("COURIER2_NAME", "Courier Agent Two").strip()
+        courier2_phone = os.environ.get("COURIER2_PHONE", "+91 9876543211").strip()
+        courier2_hash = generate_password_hash(courier2_password)
+
+        existing_courier2 = query_db(
+            "SELECT id FROM users WHERE username = ? OR email = ?",
+            (courier2_username, courier2_email),
+            one=True
+        )
+        if existing_courier2:
+            execute_db(
+                "UPDATE users SET password_hash = ?, role = 'delivery_person', full_name = ?, phone = ? WHERE id = ?",
+                (courier2_hash, courier2_name, courier2_phone, existing_courier2["id"])
+            )
+            print(f"[OK] Delivery user '{courier2_username}' updated (ID: {existing_courier2['id']}).")
+        else:
+            c2_id = execute_db(
+                """INSERT INTO users (username, email, password_hash, role, full_name, phone)
+                   VALUES (?, ?, ?, 'delivery_person', ?, ?)""",
+                (courier2_username, courier2_email, courier2_hash, courier2_name, courier2_phone)
+            )
+            print(f"[OK] Delivery user '{courier2_username}' created (ID: {c2_id}).")
+
     print("\n[SUCCESS] Seeding completed successfully.")
 
 

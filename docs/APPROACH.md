@@ -231,6 +231,11 @@ ShipTrack adopts a clean two-tier decoupled architecture:
 - **Key Challenges:** Ensuring the web app initializes SQLite database tables idempotently and auto-creates both Admin and Delivery Courier accounts directly from `ADMIN_PASSWORD` and `DELIVERY_PASSWORD` environment variables if they do not exist.
 - **Resolution:** Refactored `src/backend/app.py` startup routine to guarantee `init_db(app)` execution and perform parameterized lookups for `username` and `email` identifiers, securely hashing passwords using `werkzeug.security.generate_password_hash`. Documented exact login identifiers (`admin` / `admin@shiptrack.local`, `courier_agent1` / `courier1@shiptrack.local`). Created `tests/test_startup_seed.py` and validated 100% pass rate (20/20 tests across 6 test suites).
 
+### 2026-10-06 11:38 IST — Entry 10: Secondary Delivery Courier Provisioning via COURIER2_PASSWORD
+- **Focus:** Implemented automatic provisioning for a second delivery courier account (`courier_agent2` / `courier2@shiptrack.local`) via a new `COURIER2_PASSWORD` environment variable.
+- **Key Challenges:** Allowing fleet expansion and multiple concurrent courier operations without manual database manipulation or shell scripts.
+- **Resolution:** Added auto-seed checking and insertion for `courier_agent2` in `src/backend/app.py` and `src/backend/seed.py`. Added comprehensive tests in `tests/test_startup_seed.py` validating that both courier accounts (`courier_agent1` and `courier_agent2`) can authenticate independently via both username and email. Maintained 100% pass rate across the full test suite.
+
 ---
 
 ## 6. Testing, Security Verification & Deployment Record

@@ -17,10 +17,13 @@ def test_startup_auto_seed_accounts_from_env(monkeypatch):
         # Configure environment variables
         monkeypatch.setenv("ADMIN_PASSWORD", "TestEnvAdminPass2026!")
         monkeypatch.setenv("DELIVERY_PASSWORD", "TestEnvCourierPass2026!")
+        monkeypatch.setenv("COURIER2_PASSWORD", "TestEnvCourier2Pass2026!")
         monkeypatch.setenv("ADMIN_USERNAME", "admin")
         monkeypatch.setenv("ADMIN_EMAIL", "admin@shiptrack.local")
         monkeypatch.setenv("DELIVERY_USERNAME", "courier_agent1")
         monkeypatch.setenv("DELIVERY_EMAIL", "courier1@shiptrack.local")
+        monkeypatch.setenv("COURIER2_USERNAME", "courier_agent2")
+        monkeypatch.setenv("COURIER2_EMAIL", "courier2@shiptrack.local")
 
         # Create app pointing to the temp database
         app = create_app(test_config={
@@ -54,7 +57,7 @@ def test_startup_auto_seed_accounts_from_env(monkeypatch):
         assert res_admin_email.status_code == 200
         client.post("/api/auth/logout")
 
-        # 3. Courier login via username
+        # 3. Courier 1 login via username
         res_courier_user = client.post("/api/auth/login", json={
             "identifier": "courier_agent1",
             "password": "TestEnvCourierPass2026!"
@@ -62,7 +65,7 @@ def test_startup_auto_seed_accounts_from_env(monkeypatch):
         assert res_courier_user.status_code == 200, res_courier_user.get_json()
         assert res_courier_user.get_json()["user"]["role"] == "delivery_person"
 
-        # Courier me check
+        # Courier 1 me check
         me_courier = client.get("/api/auth/me")
         assert me_courier.status_code == 200
         assert me_courier.get_json()["user"]["username"] == "courier_agent1"
@@ -70,12 +73,36 @@ def test_startup_auto_seed_accounts_from_env(monkeypatch):
 
         client.post("/api/auth/logout")
 
-        # 4. Courier login via email
+        # 4. Courier 1 login via email
         res_courier_email = client.post("/api/auth/login", json={
             "identifier": "courier1@shiptrack.local",
             "password": "TestEnvCourierPass2026!"
         })
         assert res_courier_email.status_code == 200
+        client.post("/api/auth/logout")
+
+        # 5. Courier 2 login via username
+        res_c2_user = client.post("/api/auth/login", json={
+            "identifier": "courier_agent2",
+            "password": "TestEnvCourier2Pass2026!"
+        })
+        assert res_c2_user.status_code == 200, res_c2_user.get_json()
+        assert res_c2_user.get_json()["user"]["role"] == "delivery_person"
+
+        # Courier 2 me check
+        me_c2 = client.get("/api/auth/me")
+        assert me_c2.status_code == 200
+        assert me_c2.get_json()["user"]["username"] == "courier_agent2"
+        assert me_c2.get_json()["user"]["email"] == "courier2@shiptrack.local"
+
+        client.post("/api/auth/logout")
+
+        # 6. Courier 2 login via email
+        res_c2_email = client.post("/api/auth/login", json={
+            "identifier": "courier2@shiptrack.local",
+            "password": "TestEnvCourier2Pass2026!"
+        })
+        assert res_c2_email.status_code == 200
         client.post("/api/auth/logout")
 
     finally:
