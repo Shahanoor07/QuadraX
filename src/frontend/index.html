@@ -9,16 +9,16 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
   <!-- Bootstrap Icons via CDN -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-  <!-- Custom Enterprise Stylesheet -->
+  <!-- Application CSS -->
   <link rel="stylesheet" href="css/styles.css">
 </head>
-<body>
+<body class="bg-light d-flex flex-column min-vh-100">
 
   <!-- ==============================================================================
-       1. TOP NAVBAR & ROLE SWITCHER
+       TOP NAVBAR
        ============================================================================== -->
-  <nav class="navbar app-navbar navbar-expand-lg">
-    <div class="container-fluid">
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top shadow-sm app-navbar">
+    <div class="container-fluid px-lg-4">
       <!-- Brand Logo -->
       <a class="navbar-brand d-flex align-items-center gap-2 text-decoration-none" href="#">
         <div class="brand-badge">
@@ -26,301 +26,304 @@
         </div>
         <div>
           <span class="brand-title">ShipTrack</span>
-          <span class="brand-tag">v2.4 SECURE</span>
+          <span class="badge bg-secondary ms-1 small">PS-05</span>
         </div>
       </a>
 
-      <!-- Mobile Navbar Toggle -->
-      <button class="navbar-toggler border-0 text-white" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent">
-        <i class="bi bi-list fs-3 text-white"></i>
-      </button>
-
-      <div class="collapse navbar-collapse mt-2 mt-lg-0" id="navbarContent">
-        <!-- Role Switcher Segmented Pills -->
-        <div class="mx-auto my-2 my-lg-0">
-          <div class="role-switcher-container" role="group" aria-label="Portal Role Switcher">
-            <button class="role-btn active" id="btnRoleCustomer" onclick="switchRole('customer')">
-              <i class="bi bi-person-fill"></i> Customer
-            </button>
-            <button class="role-btn" id="btnRoleDelivery" onclick="switchRole('delivery')">
-              <i class="bi bi-truck"></i> Delivery Partner
-            </button>
-            <button class="role-btn" id="btnRoleAdmin" onclick="switchRole('admin')">
-              <i class="bi bi-shield-check"></i> Admin
-            </button>
-          </div>
+      <!-- Quick Global Tracking Lookup Input -->
+      <div class="d-none d-md-flex align-items-center ms-auto me-3" style="max-width: 320px;">
+        <div class="input-group input-group-sm">
+          <span class="input-group-text bg-secondary border-secondary text-white"><i class="bi bi-search"></i></span>
+          <input type="text" id="globalTrackingInput" class="form-control bg-dark text-white border-secondary" placeholder="Enter Tracking # (ST-...)" aria-label="Search Tracking Number">
+          <button class="btn btn-primary" type="button" id="btnGlobalSearch">Track</button>
         </div>
+      </div>
 
-        <!-- Global Quick Search & Right Controls -->
-        <div class="d-flex align-items-center gap-3">
-          <!-- Quick Search -->
-          <div class="quick-search-box">
-            <i class="bi bi-search search-icon"></i>
-            <input type="text" id="globalTrackingSearchInput" class="form-control" placeholder="Search Tracking # (e.g. ST-20261005)...">
-            <span class="shortcut-hint">↵</span>
-          </div>
-
-          <!-- Notification Bell -->
-          <div class="dropdown">
-            <button class="btn btn-dark position-relative border-0 bg-transparent text-white p-2" data-bs-toggle="dropdown" aria-expanded="false" title="Security & Dispatch Alerts">
-              <i class="bi bi-bell fs-5"></i>
-              <span class="position-absolute top-1 start-100 translate-middle badge rounded-pill bg-danger" id="notifBadgeCount">
-                3
-              </span>
-            </button>
-            <div class="dropdown-menu dropdown-menu-end shadow-lg p-0" style="width: 320px; border-radius: 12px; border: 1px solid #cbd5e1;">
-              <div class="p-3 bg-dark text-white rounded-top d-flex justify-content-between align-items-center">
-                <span class="fw-bold small text-uppercase">System Alerts</span>
-                <span class="badge bg-success">Live</span>
-              </div>
-              <div class="list-group list-group-flush small" id="notifListContainer">
-                <div class="list-group-item">
-                  <div class="d-flex w-100 justify-content-between">
-                    <strong class="text-primary"><i class="bi bi-geo-alt"></i> Out for Delivery</strong>
-                    <small class="text-muted">14:40</small>
-                  </div>
-                  <p class="mb-1 text-muted">ST-20261005-481920 is on final approach with Courier Alpha.</p>
-                </div>
-                <div class="list-group-item">
-                  <div class="d-flex w-100 justify-content-between">
-                    <strong class="text-danger"><i class="bi bi-shield-exclamation"></i> Replay Blocked</strong>
-                    <small class="text-muted">14:48</small>
-                  </div>
-                  <p class="mb-1 text-muted">Attacker replay on burned 1-time tracking token blocked (HTTP 410).</p>
-                </div>
-                <div class="list-group-item">
-                  <div class="d-flex w-100 justify-content-between">
-                    <strong class="text-success"><i class="bi bi-link-45deg"></i> Ephemeral Link</strong>
-                    <small class="text-muted">13:10</small>
-                  </div>
-                  <p class="mb-1 text-muted">1-Time high-value tracking token generated for Alice Vance.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- User Profile Menu -->
-          <div class="dropdown">
-            <button class="user-avatar-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-              <img id="navbarUserAvatar" src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80" alt="Avatar" class="user-avatar-img">
-              <div class="text-start d-none d-sm-block">
-                <div class="fw-bold small text-white lh-1" id="navbarUserName">Alice Vance</div>
-                <div class="text-muted text-uppercase" style="font-size: 0.65rem;" id="navbarUserRole">Customer</div>
-              </div>
-            </button>
-            <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-              <li><h6 class="dropdown-header">Demo Persona Switch</h6></li>
-              <li><a class="dropdown-item" href="javascript:void(0)" onclick="switchRole('customer')"><i class="bi bi-person me-2"></i> Customer: Alice</a></li>
-              <li><a class="dropdown-item" href="javascript:void(0)" onclick="switchRole('delivery')"><i class="bi bi-truck me-2"></i> Courier: Rajesh</a></li>
-              <li><a class="dropdown-item" href="javascript:void(0)" onclick="switchRole('admin')"><i class="bi bi-shield-lock me-2"></i> Admin: Sarah</a></li>
-              <li><hr class="dropdown-divider"></li>
-              <li><a class="dropdown-item text-danger" href="javascript:void(0)" onclick="resetMockState()"><i class="bi bi-arrow-clockwise me-2"></i> Reset Demo State</a></li>
-            </ul>
-          </div>
-        </div>
+      <!-- Auth / User Session Area -->
+      <div class="d-flex align-items-center gap-2" id="navSessionArea">
+        <span class="navbar-text text-light small d-none" id="navUserBadge">
+          <i class="bi bi-person-circle me-1"></i>
+          <span id="navUserName"></span>
+          <span class="badge bg-primary ms-1 text-uppercase" id="navUserRole"></span>
+        </span>
+        <button class="btn btn-outline-light btn-sm d-none" id="btnNavLogout" type="button">
+          <i class="bi bi-box-arrow-right me-1"></i> Logout
+        </button>
       </div>
     </div>
   </nav>
 
   <!-- ==============================================================================
-       MAIN APPLICATION CONTAINER
+       SYSTEM ALERT BANNER
        ============================================================================== -->
-  <main class="flex-grow-1 py-4">
-    <div class="container-fluid px-lg-5">
+  <div class="container-fluid px-lg-4 mt-3">
+    <div id="systemAlertContainer"></div>
+  </div>
+
+  <!-- ==============================================================================
+       MAIN CONTAINER
+       ============================================================================== -->
+  <main class="flex-grow-1 py-3">
+    <div class="container-fluid px-lg-4">
 
       <!-- ========================================================================
-           PORTAL 1: CUSTOMER VIEW
+           VIEW 1: AUTHENTICATION (LOGIN & REGISTER)
            ======================================================================== -->
-      <section id="customerPortalView">
-        <!-- Welcome & Quick Action Header -->
-        <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+      <section id="authView" class="py-4">
+        <div class="row justify-content-center">
+          <div class="col-md-7 col-lg-5 col-xl-4">
+            <div class="card border-0 shadow-sm rounded-4">
+              <div class="card-header bg-white border-0 pt-4 pb-2 text-center">
+                <div class="brand-badge mx-auto mb-2" style="width: 48px; height: 48px; font-size: 1.5rem;">
+                  <i class="bi bi-shield-lock-fill"></i>
+                </div>
+                <h4 class="fw-bold text-dark mb-0">ShipTrack Portal</h4>
+                <p class="text-muted small">Sign in to manage logistics or track cargo</p>
+
+                <!-- Auth Mode Tabs -->
+                <ul class="nav nav-pills nav-fill bg-light p-1 rounded-3 mt-3" role="tablist">
+                  <li class="nav-item" role="presentation">
+                    <button class="nav-link active small py-2 fw-semibold" id="tabLoginBtn" type="button">Sign In</button>
+                  </li>
+                  <li class="nav-item" role="presentation">
+                    <button class="nav-link small py-2 fw-semibold" id="tabRegisterBtn" type="button">Register</button>
+                  </li>
+                </ul>
+              </div>
+
+              <div class="card-body p-4 pt-2">
+                <!-- Login Form -->
+                <form id="formLogin">
+                  <div class="mb-3">
+                    <label class="form-label small fw-semibold text-secondary" for="loginIdentifier">Email or Username</label>
+                    <div class="input-group">
+                      <span class="input-group-text"><i class="bi bi-person"></i></span>
+                      <input type="text" class="form-control" id="loginIdentifier" placeholder="Enter your email or username" required autocomplete="username">
+                    </div>
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label small fw-semibold text-secondary" for="loginPassword">Password</label>
+                    <div class="input-group">
+                      <span class="input-group-text"><i class="bi bi-key"></i></span>
+                      <input type="password" class="form-control" id="loginPassword" placeholder="Enter your password" required autocomplete="current-password">
+                    </div>
+                  </div>
+                  <div id="loginFeedback" class="small mb-3"></div>
+                  <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold" id="btnSubmitLogin">
+                    <i class="bi bi-box-arrow-in-right me-1"></i> Sign In
+                  </button>
+                </form>
+
+                <!-- Register Form (Customer Only) -->
+                <form id="formRegister" class="d-none">
+                  <div class="mb-2">
+                    <label class="form-label small fw-semibold text-secondary" for="regUsername">Username *</label>
+                    <input type="text" class="form-control form-control-sm" id="regUsername" placeholder="e.g. john_doe" required autocomplete="username">
+                    <div class="form-text" style="font-size: 0.72rem;">3-30 characters, letters, numbers, underscores.</div>
+                  </div>
+                  <div class="mb-2">
+                    <label class="form-label small fw-semibold text-secondary" for="regEmail">Email Address *</label>
+                    <input type="email" class="form-control form-control-sm" id="regEmail" placeholder="e.g. john@example.com" required autocomplete="email">
+                  </div>
+                  <div class="mb-2">
+                    <label class="form-label small fw-semibold text-secondary" for="regFullName">Full Name *</label>
+                    <input type="text" class="form-control form-control-sm" id="regFullName" placeholder="e.g. John Doe" required autocomplete="name">
+                  </div>
+                  <div class="mb-2">
+                    <label class="form-label small fw-semibold text-secondary" for="regPhone">Phone Number</label>
+                    <input type="tel" class="form-control form-control-sm" id="regPhone" placeholder="e.g. +91 9876543210" autocomplete="tel">
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label small fw-semibold text-secondary" for="regPassword">Password *</label>
+                    <input type="password" class="form-control form-control-sm" id="regPassword" placeholder="Minimum 8 characters" required minlength="8" autocomplete="new-password">
+                  </div>
+                  <div id="registerFeedback" class="small mb-3"></div>
+                  <button type="submit" class="btn btn-success w-100 py-2 fw-semibold" id="btnSubmitRegister">
+                    <i class="bi bi-person-plus me-1"></i> Create Customer Account
+                  </button>
+                </form>
+              </div>
+            </div>
+
+            <!-- Public 1-Time Link Lookup Box -->
+            <div class="card border-0 shadow-sm rounded-4 mt-3">
+              <div class="card-body p-3">
+                <h6 class="fw-bold mb-1 small text-dark"><i class="bi bi-link-45deg me-1"></i> Have a 1-Time Secure Tracking Link?</h6>
+                <p class="text-muted small mb-2" style="font-size: 0.78rem;">Enter your ephemeral token to access live tracking. Burns immediately upon first view.</p>
+                <div class="input-group input-group-sm">
+                  <input type="text" class="form-control font-monospace" id="publicTokenInput" placeholder="Enter token...">
+                  <button class="btn btn-outline-primary" type="button" id="btnAccessPublicToken">Access</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================================================
+           VIEW 2: CUSTOMER DASHBOARD
+           ======================================================================== -->
+      <section id="customerView" class="d-none">
+        <!-- Top Action Bar -->
+        <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
           <div>
-            <h2 class="h3 fw-bold text-slate-900 mb-1">Customer Logistics Dashboard</h2>
-            <p class="text-muted small mb-0">Manage outbound shipments, monitor live GPS transit, and audit cryptographic chain of custody.</p>
+            <h4 class="fw-bold mb-0 text-dark">Customer Dashboard</h4>
+            <span class="text-muted small">Manage outbound parcels, track live shipments, and verify chain of custody</span>
           </div>
           <div class="d-flex gap-2">
-            <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#ephemeralTokenViewerModal">
-              <i class="bi bi-link-45deg me-1"></i> Access 1-Time Link
+            <button class="btn btn-primary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#createShipmentCollapse" aria-expanded="false" id="btnToggleCreateShipment">
+              <i class="bi bi-plus-circle me-1"></i> New Shipment
             </button>
-            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createShipmentModal">
-              <i class="bi bi-plus-circle-fill me-1"></i> Create Shipment
+            <button class="btn btn-outline-secondary btn-sm" type="button" id="btnRefreshCustomerShipments">
+              <i class="bi bi-arrow-clockwise me-1"></i> Refresh
             </button>
           </div>
         </div>
 
-        <!-- Metrics Cards -->
-        <div class="row g-3 mb-4">
-          <div class="col-sm-6 col-xl-3">
-            <div class="metric-card card-blue">
-              <div class="d-flex justify-content-between align-items-center mb-3">
-                <span class="metric-label">Active Shipments</span>
-                <div class="metric-icon-box icon-blue"><i class="bi bi-box-seam"></i></div>
-              </div>
-              <div class="metric-value" id="custMetricActive">3</div>
-              <div class="metric-trend text-primary mt-2"><i class="bi bi-arrow-up-right"></i> 2 pending delivery today</div>
+        <!-- Create Shipment Form (Collapsible) -->
+        <div class="collapse mb-4" id="createShipmentCollapse">
+          <div class="card border-0 shadow-sm rounded-4">
+            <div class="card-header bg-white border-bottom p-3">
+              <h5 class="fw-bold mb-0 text-primary"><i class="bi bi-box-seam me-1"></i> Create New Shipment Request</h5>
+              <small class="text-muted">Unique tracking number generated server-side. Initial status: 'Order Placed'.</small>
             </div>
-          </div>
-          <div class="col-sm-6 col-xl-3">
-            <div class="metric-card card-purple">
-              <div class="d-flex justify-content-between align-items-center mb-3">
-                <span class="metric-label">In Transit</span>
-                <div class="metric-icon-box icon-purple"><i class="bi bi-truck"></i></div>
-              </div>
-              <div class="metric-value" id="custMetricTransit">2</div>
-              <div class="metric-trend text-purple mt-2"><i class="bi bi-geo-alt"></i> Live GPS streaming active</div>
-            </div>
-          </div>
-          <div class="col-sm-6 col-xl-3">
-            <div class="metric-card card-green">
-              <div class="d-flex justify-content-between align-items-center mb-3">
-                <span class="metric-label">Delivered</span>
-                <div class="metric-icon-box icon-green"><i class="bi bi-check-circle-fill"></i></div>
-              </div>
-              <div class="metric-value" id="custMetricDelivered">14</div>
-              <div class="metric-trend text-success mt-2"><i class="bi bi-shield-check"></i> 100% verified custody</div>
-            </div>
-          </div>
-          <div class="col-sm-6 col-xl-3">
-            <div class="metric-card card-amber">
-              <div class="d-flex justify-content-between align-items-center mb-3">
-                <span class="metric-label">Total Spent</span>
-                <div class="metric-icon-box icon-amber"><i class="bi bi-currency-dollar"></i></div>
-              </div>
-              <div class="metric-value" id="custMetricSpent">$428.50</div>
-              <div class="metric-trend text-warning mt-2"><i class="bi bi-receipt"></i> Receipts available</div>
+            <div class="card-body p-4">
+              <form id="formCreateShipment">
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <label class="form-label small fw-semibold text-secondary" for="shipSenderName">Sender Full Name *</label>
+                    <input type="text" class="form-control form-control-sm" id="shipSenderName" required maxlength="100">
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label small fw-semibold text-secondary" for="shipSenderAddress">Pickup Address *</label>
+                    <input type="text" class="form-control form-control-sm" id="shipSenderAddress" required minlength="5" maxlength="300" placeholder="Street, City, Postal Code">
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label small fw-semibold text-secondary" for="shipRecipientName">Recipient Full Name *</label>
+                    <input type="text" class="form-control form-control-sm" id="shipRecipientName" required maxlength="100">
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label small fw-semibold text-secondary" for="shipRecipientPhone">Recipient Phone *</label>
+                    <input type="tel" class="form-control form-control-sm" id="shipRecipientPhone" required placeholder="+91 9876543210">
+                  </div>
+                  <div class="col-12">
+                    <label class="form-label small fw-semibold text-secondary" for="shipRecipientAddress">Delivery Destination Address *</label>
+                    <input type="text" class="form-control form-control-sm" id="shipRecipientAddress" required minlength="5" maxlength="300" placeholder="Street, Building/Flat, City, Postal Code">
+                  </div>
+                  <div class="col-md-8">
+                    <label class="form-label small fw-semibold text-secondary" for="shipPackageDesc">Package Description *</label>
+                    <input type="text" class="form-control form-control-sm" id="shipPackageDesc" required maxlength="500" placeholder="e.g. Legal documents, Electronics, Clothes">
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label small fw-semibold text-secondary" for="shipWeightKg">Weight (in kg) *</label>
+                    <div class="input-group input-group-sm">
+                      <input type="number" step="0.1" min="0.01" max="1000" class="form-control" id="shipWeightKg" value="1.0" required>
+                      <span class="input-group-text">kg</span>
+                    </div>
+                  </div>
+                </div>
+                <div id="createShipmentFeedback" class="small mt-3"></div>
+                <div class="d-flex justify-content-end gap-2 mt-3">
+                  <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="collapse" data-bs-target="#createShipmentCollapse">Cancel</button>
+                  <button type="submit" class="btn btn-primary btn-sm px-4 fw-semibold" id="btnSubmitCreateShipment">
+                    <i class="bi bi-check2-circle me-1"></i> Submit Shipment
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         </div>
 
-        <!-- Featured Shipment: Live Tracking & Stepper Card -->
-        <div class="card border-0 shadow-sm rounded-4 mb-4" id="liveTrackingCardContainer">
-          <div class="card-header bg-white border-bottom p-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
-            <div class="d-flex align-items-center gap-2">
-              <span class="badge bg-primary px-3 py-2 fw-semibold" id="activeTrackingBadge">ST-20261005-481920</span>
-              <span class="status-badge badge-out-for-delivery" id="activeStatusPill"><i class="bi bi-truck"></i> Out for Delivery</span>
-              <span class="badge bg-danger-subtle text-danger border border-danger-subtle" id="activeFragilePill"><i class="bi bi-gem"></i> High-Value / Fragile</span>
-            </div>
-            <div class="d-flex gap-2">
-              <button class="btn btn-sm btn-outline-secondary" onclick="generate1TimeLinkForActive()">
-                <i class="bi bi-share-fill me-1"></i> Generate 1-Time Link
-              </button>
-              <button class="btn btn-sm btn-outline-success" onclick="verifyActiveShipmentChain()">
-                <i class="bi bi-shield-lock-fill me-1"></i> Verify Custody Chain
-              </button>
-            </div>
-          </div>
-
-          <div class="card-body p-4">
-            <!-- Stepper -->
-            <div class="tracking-stepper-horizontal" id="horizontalStepperContainer">
-              <!-- Dynamically populated by JS -->
-            </div>
-
-            <div class="row g-4 mt-2">
-              <!-- Driver Details Card -->
-              <div class="col-lg-5">
-                <div class="driver-card h-100">
-                  <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80" alt="Courier Portrait" class="driver-portrait" id="activeDriverPortrait">
-                  <div class="flex-grow-1">
-                    <div class="d-flex justify-content-between align-items-start">
-                      <div>
-                        <h6 class="fw-bold mb-0" id="activeDriverName">Rajesh Kumar</h6>
-                        <span class="badge bg-light text-dark border small">Courier Alpha</span>
-                      </div>
-                      <span class="text-warning small fw-bold"><i class="bi bi-star-fill"></i> 4.9 (1.2k)</span>
-                    </div>
-                    <div class="small text-muted mt-2" id="activeDriverVehicle">
-                      <i class="bi bi-truck me-1"></i> Electric Cargo Van (TS-09-EQ-4421)
-                    </div>
-                    <div class="d-flex gap-2 mt-3">
-                      <a href="tel:+919888800001" class="btn btn-sm btn-outline-primary" id="activeDriverCallBtn">
-                        <i class="bi bi-telephone-fill me-1"></i> Call Driver
-                      </a>
-                      <button class="btn btn-sm btn-light border" onclick="askAIAssistant('Where is my package ST-20261005-481920?')">
-                        <i class="bi bi-chat-dots-fill me-1"></i> Live Chat
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Live GPS Telemetry & Map Simulation Box -->
-              <div class="col-lg-7">
-                <div class="map-simulation-box h-100">
-                  <div class="map-grid-overlay"></div>
-                  <div class="d-flex justify-content-between align-items-start position-relative z-2 mb-3">
-                    <div>
-                      <span class="pulse-indicator me-1"></span>
-                      <strong class="text-uppercase small tracking-wider text-light">Live Telemetry Feed</strong>
-                      <div class="text-muted small">Origin: HITEC City → Destination: Madhapur Sector 12</div>
-                    </div>
-                    <span class="gps-badge" id="telemetryCoordsBadge">17.4485° N, 78.3752° E</span>
-                  </div>
-
-                  <!-- Simulated Visual Map Vector -->
-                  <div class="position-relative z-2 py-3">
-                    <div class="d-flex justify-content-between align-items-center text-light small mb-2">
-                      <span><i class="bi bi-geo-alt-fill text-danger"></i> Dispatch Hub</span>
-                      <span class="text-primary fw-bold"><i class="bi bi-truck text-primary"></i> <span id="telemetrySpeedVal">38.5 km/h</span></span>
-                      <span><i class="bi bi-house-check-fill text-success"></i> Destination Hub</span>
-                    </div>
-                    <div class="progress" style="height: 6px; background-color: rgba(255,255,255,0.1);">
-                      <div class="progress-bar progress-bar-striped progress-bar-animated bg-primary" role="progressbar" style="width: 78%" id="telemetryProgressBar"></div>
-                    </div>
-                  </div>
-
-                  <!-- Telemetry Metrics Bar -->
-                  <div class="d-flex justify-content-between position-relative z-2 pt-2 border-top border-secondary small text-slate-300">
-                    <span><i class="bi bi-compass"></i> Heading: 145° SE</span>
-                    <span><i class="bi bi-battery-charging text-success"></i> Battery: 84%</span>
-                    <span><i class="bi bi-clock-history"></i> Updated: Just now</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Chain of Custody Audit Result Box (Toggled by Verify Button) -->
-            <div class="alert alert-success border-success mt-3 d-none" id="custodyAuditAlert">
-              <div class="d-flex align-items-center justify-content-between">
-                <div>
-                  <h6 class="fw-bold mb-1"><i class="bi bi-shield-check text-success fs-5 me-1"></i> Cryptographic Chain of Custody: 100% Intact</h6>
-                  <p class="mb-0 small" id="custodyAuditDetails">All status updates verified from 64-zero genesis hash. Zero tampering detected.</p>
-                </div>
-                <button class="btn btn-sm btn-outline-success" onclick="document.getElementById('custodyAuditAlert').classList.add('d-none')">Dismiss</button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Shipment History Table Card -->
-        <div class="card border-0 shadow-sm rounded-4">
+        <!-- Live Tracking Details Container (Shown when tracking is active) -->
+        <div class="card border-0 shadow-sm rounded-4 mb-4 d-none" id="customerTrackingDetailCard">
           <div class="card-header bg-white border-bottom p-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
             <div>
-              <h5 class="fw-bold mb-0">Shipment History</h5>
-              <small class="text-muted">Search, inspect live status, download receipts, or generate 1-time tracking links</small>
+              <span class="badge bg-primary px-3 py-2 font-monospace fs-6" id="detailTrackingNumBadge"></span>
+              <span class="badge ms-2" id="detailStatusBadge"></span>
             </div>
-            <!-- Filter Pills -->
-            <div class="btn-group btn-group-sm" role="group">
-              <button type="button" class="btn btn-outline-secondary active" onclick="filterHistoryTable('all', this)">All</button>
-              <button type="button" class="btn btn-outline-secondary" onclick="filterHistoryTable('active', this)">Active</button>
-              <button type="button" class="btn btn-outline-secondary" onclick="filterHistoryTable('delivered', this)">Delivered</button>
-              <button type="button" class="btn btn-outline-secondary" onclick="filterHistoryTable('cancelled', this)">Cancelled</button>
+            <div class="d-flex gap-2">
+              <button class="btn btn-outline-success btn-sm" type="button" id="btnVerifyChain">
+                <i class="bi bi-shield-check me-1"></i> Verify Custody Chain
+              </button>
+              <button class="btn btn-outline-primary btn-sm" type="button" id="btnGenerateToken">
+                <i class="bi bi-link-45deg me-1"></i> 1-Time Link
+              </button>
+              <button class="btn btn-close btn-sm" type="button" id="btnCloseTrackingDetail" aria-label="Close"></button>
             </div>
+          </div>
+          <div class="card-body p-4">
+            <!-- Chain Verification Result Container -->
+            <div id="chainVerificationAlertContainer" class="mb-3"></div>
+            <!-- Ephemeral Token Output Container -->
+            <div id="generatedTokenAlertContainer" class="mb-3"></div>
+
+            <!-- Shipment Metadata Grid -->
+            <div class="row g-3 small mb-4">
+              <div class="col-sm-6 col-lg-3">
+                <span class="text-muted d-block">Sender</span>
+                <strong id="detailSenderName"></strong>
+                <div class="text-muted" id="detailSenderAddress"></div>
+              </div>
+              <div class="col-sm-6 col-lg-3">
+                <span class="text-muted d-block">Recipient</span>
+                <strong id="detailRecipientName"></strong>
+                <div class="text-muted" id="detailRecipientAddress"></div>
+                <div class="text-muted" id="detailRecipientPhone"></div>
+              </div>
+              <div class="col-sm-6 col-lg-3">
+                <span class="text-muted d-block">Package Details</span>
+                <strong id="detailPackageDesc"></strong>
+                <div class="text-muted"><span id="detailWeightKg"></span> kg</div>
+              </div>
+              <div class="col-sm-6 col-lg-3">
+                <span class="text-muted d-block">Timeline Created</span>
+                <strong id="detailCreatedAt"></strong>
+              </div>
+            </div>
+
+            <!-- Status Timeline Audit Table -->
+            <h6 class="fw-bold text-secondary mb-2 small text-uppercase tracking-wider">Cryptographic Status Timeline (Audit Trail)</h6>
+            <div class="table-responsive">
+              <table class="table table-sm table-bordered align-middle mb-0 small">
+                <thead class="table-light">
+                  <tr>
+                    <th>Stage</th>
+                    <th>Location</th>
+                    <th>Notes</th>
+                    <th>Timestamp</th>
+                    <th>Updated By</th>
+                    <th>Record Hash (SHA-256)</th>
+                  </tr>
+                </thead>
+                <tbody id="timelineTableBody">
+                  <!-- Inserted dynamically via textContent -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Customer Shipments Table Card -->
+        <div class="card border-0 shadow-sm rounded-4">
+          <div class="card-header bg-white border-bottom p-3">
+            <h5 class="fw-bold mb-0 text-dark">My Shipments</h5>
+            <small class="text-muted">History of all parcels registered to your account</small>
           </div>
           <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
-              <thead class="table-light small text-uppercase text-muted">
+              <thead class="table-light small text-uppercase text-secondary">
                 <tr>
-                  <th>Tracking ID</th>
+                  <th>Tracking Number</th>
                   <th>Recipient & Destination</th>
-                  <th>Origin & Date</th>
+                  <th>Description</th>
+                  <th>Weight</th>
                   <th>Status</th>
-                  <th>Weight / Tier</th>
+                  <th>Created Date</th>
                   <th class="text-end">Actions</th>
                 </tr>
               </thead>
-              <tbody id="customerHistoryTableBody">
-                <!-- Dynamically rendered -->
+              <tbody id="customerShipmentsTableBody">
+                <!-- Inserted dynamically via textContent -->
               </tbody>
             </table>
           </div>
@@ -328,266 +331,201 @@
       </section>
 
       <!-- ========================================================================
-           PORTAL 2: DELIVERY-PERSON VIEW
+           VIEW 3: DELIVERY COURIER DASHBOARD
            ======================================================================== -->
-      <section id="deliveryPortalView" class="d-none">
-        <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+      <section id="deliveryView" class="d-none">
+        <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
           <div>
-            <div class="d-flex align-items-center gap-2">
-              <h2 class="h3 fw-bold text-slate-900 mb-0">Courier Partner Portal</h2>
-              <span class="badge bg-success-subtle text-success border border-success-subtle" id="courierStatusBadge">
-                <span class="pulse-indicator me-1"></span> Online
-              </span>
-            </div>
-            <p class="text-muted small mb-0">Assigned dispatch route, real-time OTP confirmation, and status progression engine.</p>
+            <h4 class="fw-bold mb-0 text-dark">Delivery Courier Portal</h4>
+            <span class="text-muted small">Assigned tasks and cryptographic status progression</span>
           </div>
-          <div class="d-flex align-items-center gap-3">
-            <!-- Availability Toggle -->
-            <div class="form-check form-switch fs-5">
-              <input class="form-check-input cursor-pointer" type="checkbox" role="switch" id="courierAvailabilitySwitch" checked onchange="toggleCourierAvailability(this)">
-              <label class="form-check-label fs-6 fw-semibold text-slate-700" for="courierAvailabilitySwitch">Ready for Dispatch</label>
-            </div>
-          </div>
+          <button class="btn btn-outline-secondary btn-sm" type="button" id="btnRefreshDeliveryTasks">
+            <i class="bi bi-arrow-clockwise me-1"></i> Refresh Tasks
+          </button>
         </div>
 
-        <!-- Courier Top Metrics -->
+        <!-- Courier Metrics Cards -->
         <div class="row g-3 mb-4">
-          <div class="col-sm-6 col-xl-3">
+          <div class="col-sm-6 col-lg-3">
             <div class="metric-card card-blue">
-              <div class="d-flex justify-content-between align-items-center mb-3">
-                <span class="metric-label">Today's Deliveries</span>
-                <div class="metric-icon-box icon-blue"><i class="bi bi-box-seam-fill"></i></div>
-              </div>
-              <div class="metric-value">8</div>
-              <div class="metric-trend text-primary mt-2"><i class="bi bi-calendar-check"></i> 5 Completed, 3 Pending</div>
+              <span class="metric-label">Total Assigned</span>
+              <div class="metric-value" id="delivMetricTotal">0</div>
             </div>
           </div>
-          <div class="col-sm-6 col-xl-3">
+          <div class="col-sm-6 col-lg-3">
             <div class="metric-card card-amber">
-              <div class="d-flex justify-content-between align-items-center mb-3">
-                <span class="metric-label">Pending Pickups</span>
-                <div class="metric-icon-box icon-amber"><i class="bi bi-clock-history"></i></div>
-              </div>
-              <div class="metric-value">1</div>
-              <div class="metric-trend text-warning mt-2"><i class="bi bi-geo-alt"></i> Genome Valley Hub</div>
+              <span class="metric-label">Picked Up / Transit</span>
+              <div class="metric-value" id="delivMetricTransit">0</div>
             </div>
           </div>
-          <div class="col-sm-6 col-xl-3">
-            <div class="metric-card card-green">
-              <div class="d-flex justify-content-between align-items-center mb-3">
-                <span class="metric-label">Completed Deliveries</span>
-                <div class="metric-icon-box icon-green"><i class="bi bi-check2-all"></i></div>
-              </div>
-              <div class="metric-value">5</div>
-              <div class="metric-trend text-success mt-2"><i class="bi bi-award"></i> 100% on-time SLA</div>
-            </div>
-          </div>
-          <div class="col-sm-6 col-xl-3">
+          <div class="col-sm-6 col-lg-3">
             <div class="metric-card card-purple">
-              <div class="d-flex justify-content-between align-items-center mb-3">
-                <span class="metric-label">Estimated Route Earnings</span>
-                <div class="metric-icon-box icon-purple"><i class="bi bi-cash-coin"></i></div>
-              </div>
-              <div class="metric-value">$142.00</div>
-              <div class="metric-trend text-purple mt-2"><i class="bi bi-lightning-charge"></i> Base + Priority bonus</div>
+              <span class="metric-label">Out for Delivery</span>
+              <div class="metric-value" id="delivMetricOut">0</div>
             </div>
           </div>
-        </div>
-
-        <!-- Assigned Shipments Queue Header -->
-        <div class="d-flex justify-content-between align-items-center mb-3">
-          <h5 class="fw-bold mb-0">Assigned Delivery Queue (Route Priority Sorted)</h5>
-          <span class="badge bg-secondary" id="courierQueueCountBadge">2 Active Tasks</span>
-        </div>
-
-        <!-- Queue Cards Container -->
-        <div class="row g-3" id="courierQueueContainer">
-          <!-- Dynamically populated by JS -->
-        </div>
-      </section>
-
-      <!-- ========================================================================
-           PORTAL 3: ADMIN MANAGEMENT VIEW
-           ======================================================================== -->
-      <section id="adminPortalView" class="d-none">
-        <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
-          <div>
-            <h2 class="h3 fw-bold text-slate-900 mb-1">Fleet Operations & Admin Command</h2>
-            <p class="text-muted small mb-0">Platform oversight, unassigned shipment dispatching, courier telemetry, and security event forensics.</p>
-          </div>
-          <div class="d-flex gap-2">
-            <button class="btn btn-outline-danger" onclick="simulateAttackDetection()">
-              <i class="bi bi-shield-slash me-1"></i> Simulate Intrusion Probe
-            </button>
-            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createShipmentModal">
-              <i class="bi bi-plus-circle-fill me-1"></i> New Shipment
-            </button>
-          </div>
-        </div>
-
-        <!-- Admin System Metrics -->
-        <div class="row g-3 mb-4">
-          <div class="col-sm-6 col-xl-3">
-            <div class="metric-card card-blue">
-              <div class="d-flex justify-content-between align-items-center mb-3">
-                <span class="metric-label">Total Packages Handled</span>
-                <div class="metric-icon-box icon-blue"><i class="bi bi-boxes"></i></div>
-              </div>
-              <div class="metric-value">1,842</div>
-              <div class="metric-trend text-primary mt-2"><i class="bi bi-arrow-up-right"></i> +14.2% this month</div>
-            </div>
-          </div>
-          <div class="col-sm-6 col-xl-3">
-            <div class="metric-card card-purple">
-              <div class="d-flex justify-content-between align-items-center mb-3">
-                <span class="metric-label">Active Drivers on Road</span>
-                <div class="metric-icon-box icon-purple"><i class="bi bi-person-badge"></i></div>
-              </div>
-              <div class="metric-value">24</div>
-              <div class="metric-trend text-purple mt-2"><i class="bi bi-broadcast"></i> 18 in transit</div>
-            </div>
-          </div>
-          <div class="col-sm-6 col-xl-3">
+          <div class="col-sm-6 col-lg-3">
             <div class="metric-card card-green">
-              <div class="d-flex justify-content-between align-items-center mb-3">
-                <span class="metric-label">Delivery Success Rate</span>
-                <div class="metric-icon-box icon-green"><i class="bi bi-patch-check-fill"></i></div>
-              </div>
-              <div class="metric-value">99.4%</div>
-              <div class="metric-trend text-success mt-2"><i class="bi bi-shield-check"></i> Exceeds SLA (98%)</div>
-            </div>
-          </div>
-          <div class="col-sm-6 col-xl-3">
-            <div class="metric-card card-amber">
-              <div class="d-flex justify-content-between align-items-center mb-3">
-                <span class="metric-label">Average Delivery Time</span>
-                <div class="metric-icon-box icon-amber"><i class="bi bi-stopwatch"></i></div>
-              </div>
-              <div class="metric-value">42 min</div>
-              <div class="metric-trend text-warning mt-2"><i class="bi bi-lightning-fill"></i> -8 min vs baseline</div>
+              <span class="metric-label">Delivered</span>
+              <div class="metric-value" id="delivMetricDelivered">0</div>
             </div>
           </div>
         </div>
 
-        <!-- Unassigned Shipments & Dispatch Board -->
-        <div class="card border-0 shadow-sm rounded-4 mb-4">
-          <div class="card-header bg-white border-bottom p-3 d-flex justify-content-between align-items-center">
-            <div>
-              <h5 class="fw-bold mb-0 text-danger"><i class="bi bi-exclamation-triangle-fill me-1"></i> Unassigned Shipments Requiring Dispatch</h5>
-              <small class="text-muted">Parcels awaiting driver assignment to enter delivery route</small>
-            </div>
-            <span class="badge bg-danger px-3 py-2" id="unassignedCountBadge">2 Awaiting Dispatch</span>
+        <!-- Assigned Tasks Table -->
+        <div class="card border-0 shadow-sm rounded-4">
+          <div class="card-header bg-white border-bottom p-3">
+            <h5 class="fw-bold mb-0 text-dark">Assigned Shipments</h5>
+            <small class="text-muted">Update status milestones in the cryptographic custody chain</small>
           </div>
           <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
-              <thead class="table-light small text-uppercase text-muted">
+              <thead class="table-light small text-uppercase text-secondary">
                 <tr>
-                  <th>Tracking ID</th>
-                  <th>Customer</th>
+                  <th>Tracking Number</th>
                   <th>Pickup Address</th>
-                  <th>Destination</th>
-                  <th>Weight & Tier</th>
-                  <th class="text-end">Dispatch Action</th>
+                  <th>Delivery Address</th>
+                  <th>Recipient Phone</th>
+                  <th>Cargo Description</th>
+                  <th>Status</th>
+                  <th class="text-end">Update Milestone</th>
                 </tr>
               </thead>
-              <tbody id="unassignedShipmentsTableBody">
-                <!-- Dynamically rendered -->
+              <tbody id="deliveryTasksTableBody">
+                <!-- Inserted dynamically via textContent -->
               </tbody>
             </table>
           </div>
         </div>
+      </section>
 
-        <!-- Admin Management Tabs Card -->
+      <!-- ========================================================================
+           VIEW 4: ADMIN MANAGEMENT DASHBOARD
+           ======================================================================== -->
+      <section id="adminView" class="d-none">
+        <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+          <div>
+            <h4 class="fw-bold mb-0 text-dark">Admin Management Portal</h4>
+            <span class="text-muted small">System metrics, dispatch assignment, user management, and security intrusion events</span>
+          </div>
+          <button class="btn btn-outline-secondary btn-sm" type="button" id="btnRefreshAdminData">
+            <i class="bi bi-arrow-clockwise me-1"></i> Refresh Admin Data
+          </button>
+        </div>
+
+        <!-- Admin Metrics Cards -->
+        <div class="row g-3 mb-4">
+          <div class="col-sm-6 col-lg-3">
+            <div class="metric-card card-blue">
+              <span class="metric-label">Total Shipments</span>
+              <div class="metric-value" id="adminMetricShipments">0</div>
+            </div>
+          </div>
+          <div class="col-sm-6 col-lg-3">
+            <div class="metric-card card-green">
+              <span class="metric-label">Total Users</span>
+              <div class="metric-value" id="adminMetricUsers">0</div>
+            </div>
+          </div>
+          <div class="col-sm-6 col-lg-3">
+            <div class="metric-card card-amber">
+              <span class="metric-label">In Delivery</span>
+              <div class="metric-value" id="adminMetricInDelivery">0</div>
+            </div>
+          </div>
+          <div class="col-sm-6 col-lg-3">
+            <div class="metric-card card-purple">
+              <span class="metric-label">Security Alerts</span>
+              <div class="metric-value" id="adminMetricAlerts">0</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Admin Tabs Card -->
         <div class="card border-0 shadow-sm rounded-4">
           <div class="card-header bg-white border-bottom p-3">
-            <ul class="nav nav-pills card-header-pills" id="adminTabs" role="tablist">
+            <ul class="nav nav-pills card-header-pills" id="adminNavTabs" role="tablist">
               <li class="nav-item" role="presentation">
-                <button class="nav-link active fw-semibold" id="tabAllShipments" data-bs-toggle="pill" data-bs-target="#panelAllShipments" type="button" role="tab">
-                  <i class="bi bi-box-seam me-1"></i> All Shipments
-                </button>
+                <button class="nav-link active small fw-semibold" id="tabAdminShipmentsBtn" type="button">All Shipments</button>
               </li>
               <li class="nav-item" role="presentation">
-                <button class="nav-link fw-semibold" id="tabActiveDrivers" data-bs-toggle="pill" data-bs-target="#panelActiveDrivers" type="button" role="tab">
-                  <i class="bi bi-truck me-1"></i> Active Drivers
-                </button>
+                <button class="nav-link small fw-semibold" id="tabAdminDispatchBtn" type="button">Unassigned Dispatch</button>
               </li>
               <li class="nav-item" role="presentation">
-                <button class="nav-link fw-semibold" id="tabSecurityEvents" data-bs-toggle="pill" data-bs-target="#panelSecurityEvents" type="button" role="tab">
-                  <i class="bi bi-shield-shaded me-1"></i> Security Audit Telemetry
-                </button>
+                <button class="nav-link small fw-semibold" id="tabAdminUsersBtn" type="button">System Users</button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link small fw-semibold" id="tabAdminSecurityBtn" type="button">Security Intrusion Events</button>
               </li>
             </ul>
           </div>
           <div class="card-body p-0">
-            <div class="tab-content" id="adminTabsContent">
-              <!-- Tab 1: All Shipments -->
-              <div class="tab-pane fade show active p-3" id="panelAllShipments" role="tabpanel">
-                <div class="table-responsive">
-                  <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light small text-uppercase text-muted">
-                      <tr>
-                        <th>Tracking ID</th>
-                        <th>Customer</th>
-                        <th>Assigned Driver</th>
-                        <th>Destination</th>
-                        <th>Status</th>
-                        <th class="text-end">Action</th>
-                      </tr>
-                    </thead>
-                    <tbody id="adminAllShipmentsTableBody">
-                      <!-- Dynamically rendered -->
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+            <!-- Tab 1: All Shipments Table -->
+            <div class="table-responsive" id="adminShipmentsPanel">
+              <table class="table table-hover align-middle mb-0">
+                <thead class="table-light small text-uppercase text-secondary">
+                  <tr>
+                    <th>Tracking Number</th>
+                    <th>Customer</th>
+                    <th>Assigned Courier</th>
+                    <th>Destination</th>
+                    <th>Status</th>
+                    <th>Created At</th>
+                  </tr>
+                </thead>
+                <tbody id="adminShipmentsTableBody"></tbody>
+              </table>
+            </div>
 
-              <!-- Tab 2: Active Drivers -->
-              <div class="tab-pane fade p-3" id="panelActiveDrivers" role="tabpanel">
-                <div class="table-responsive">
-                  <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light small text-uppercase text-muted">
-                      <tr>
-                        <th>Driver Details</th>
-                        <th>Vehicle & Plate</th>
-                        <th>Status</th>
-                        <th>Current Tasks</th>
-                        <th>Proximity</th>
-                        <th>Rating</th>
-                      </tr>
-                    </thead>
-                    <tbody id="adminDriversTableBody">
-                      <!-- Dynamically rendered -->
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+            <!-- Tab 2: Unassigned Dispatch Table -->
+            <div class="table-responsive d-none" id="adminDispatchPanel">
+              <table class="table table-hover align-middle mb-0">
+                <thead class="table-light small text-uppercase text-secondary">
+                  <tr>
+                    <th>Tracking Number</th>
+                    <th>Customer</th>
+                    <th>Pickup</th>
+                    <th>Destination</th>
+                    <th>Cargo Description</th>
+                    <th class="text-end">Assign Courier</th>
+                  </tr>
+                </thead>
+                <tbody id="adminDispatchTableBody"></tbody>
+              </table>
+            </div>
 
-              <!-- Tab 3: Security Events & Intrusion Telemetry -->
-              <div class="tab-pane fade p-3" id="panelSecurityEvents" role="tabpanel">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                  <div>
-                    <h6 class="fw-bold mb-0">Intrusion & Threat Detection Log (/api/admin/security-events)</h6>
-                    <small class="text-muted">Real-time passive intrusion sensors and tamper alerts</small>
-                  </div>
-                  <span class="badge bg-dark">Immutable Log</span>
-                </div>
-                <div class="table-responsive">
-                  <table class="table table-sm table-hover align-middle mb-0">
-                    <thead class="table-light small text-uppercase text-muted">
-                      <tr>
-                        <th>Timestamp</th>
-                        <th>Event Type</th>
-                        <th>Origin IP</th>
-                        <th>Target Path</th>
-                        <th>Forensic Details</th>
-                      </tr>
-                    </thead>
-                    <tbody id="adminSecurityEventsTableBody">
-                      <!-- Dynamically rendered -->
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+            <!-- Tab 3: System Users Table -->
+            <div class="table-responsive d-none" id="adminUsersPanel">
+              <table class="table table-hover align-middle mb-0">
+                <thead class="table-light small text-uppercase text-secondary">
+                  <tr>
+                    <th>User ID</th>
+                    <th>Username</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Full Name</th>
+                    <th>Phone</th>
+                    <th>Registered</th>
+                  </tr>
+                </thead>
+                <tbody id="adminUsersTableBody"></tbody>
+              </table>
+            </div>
+
+            <!-- Tab 4: Security Events Table -->
+            <div class="table-responsive d-none" id="adminSecurityPanel">
+              <table class="table table-sm table-hover align-middle mb-0">
+                <thead class="table-light small text-uppercase text-secondary">
+                  <tr>
+                    <th>Timestamp</th>
+                    <th>Event Type</th>
+                    <th>Origin IP</th>
+                    <th>Target Path</th>
+                    <th>Forensic Details</th>
+                  </tr>
+                </thead>
+                <tbody id="adminSecurityTableBody"></tbody>
+              </table>
             </div>
           </div>
         </div>
@@ -597,425 +535,95 @@
   </main>
 
   <!-- ==============================================================================
-       MODALS & OVERLAYS
+       MODAL: UPDATE COURIER STATUS
        ============================================================================== -->
-
-  <!-- Modal 1: Create Shipment Multi-Step Wizard -->
-  <div class="modal fade" id="createShipmentModal" tabindex="-1" aria-labelledby="createShipmentModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-      <div class="modal-content border-0 shadow-lg rounded-4">
-        <div class="modal-header bg-slate-900 text-white border-bottom-0 p-4">
-          <div>
-            <h5 class="modal-title fw-bold" id="createShipmentModalLabel">Create New Shipment Request</h5>
-            <small class="text-slate-400">Step-by-step booking with instant tracking generation & pricing</small>
-          </div>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+  <div class="modal fade" id="modalCourierStatus" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content border-0 shadow rounded-4">
+        <div class="modal-header bg-dark text-white p-3">
+          <h6 class="modal-title fw-bold" id="modalCourierStatusTitle">Update Shipment Status</h6>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body p-4">
-          <!-- Stepper Navigation Header -->
-          <div class="stepper-header mb-4">
-            <div class="stepper-item active" id="wizardStepHeader1" onclick="jumpToWizardStep(1)">
-              <div class="stepper-circle">1</div>
-              <div class="stepper-title">Addresses</div>
+          <form id="formCourierStatus">
+            <input type="hidden" id="statusShipmentId">
+            <div class="mb-3">
+              <label class="form-label small fw-semibold text-secondary" for="selectNextStatus">Next Status Milestone *</label>
+              <select class="form-select form-select-sm" id="selectNextStatus" required></select>
             </div>
-            <div class="stepper-item" id="wizardStepHeader2" onclick="jumpToWizardStep(2)">
-              <div class="stepper-circle">2</div>
-              <div class="stepper-title">Package</div>
+            <div class="mb-3">
+              <label class="form-label small fw-semibold text-secondary" for="inputStatusLocation">Current Location *</label>
+              <input type="text" class="form-control form-control-sm" id="inputStatusLocation" required placeholder="e.g. Hyderabad Hub, Jubilee Hills Route">
             </div>
-            <div class="stepper-item" id="wizardStepHeader3" onclick="jumpToWizardStep(3)">
-              <div class="stepper-circle">3</div>
-              <div class="stepper-title">Service Tier</div>
+            <div class="mb-3">
+              <label class="form-label small fw-semibold text-secondary" for="inputStatusNotes">Update Notes</label>
+              <input type="text" class="form-control form-control-sm" id="inputStatusNotes" placeholder="e.g. Package verified and loaded onto vehicle.">
             </div>
-            <div class="stepper-item" id="wizardStepHeader4" onclick="jumpToWizardStep(4)">
-              <div class="stepper-circle">4</div>
-              <div class="stepper-title">Review</div>
-            </div>
-          </div>
-
-          <!-- Wizard Forms -->
-          <form id="createShipmentForm" onsubmit="event.preventDefault();">
-            <!-- Step 1: Addresses -->
-            <div id="wizardStepContent1">
-              <h6 class="fw-bold mb-3 text-primary"><i class="bi bi-geo-alt-fill me-1"></i> Sender & Receiver Information</h6>
-              <div class="row g-3">
-                <div class="col-md-6">
-                  <label class="form-label small fw-semibold">Sender Full Name *</label>
-                  <input type="text" class="form-control" id="formSenderName" value="Alice Vance" required>
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label small fw-semibold">Sender Phone *</label>
-                  <input type="text" class="form-control" id="formSenderPhone" value="+91 97777 00001" required>
-                </div>
-                <div class="col-12">
-                  <label class="form-label small fw-semibold">Pickup Address *</label>
-                  <textarea class="form-control" id="formSenderAddress" rows="2" required>100 Safe Deposit Way, HITEC City, Hyderabad</textarea>
-                </div>
-                <hr class="my-2">
-                <div class="col-md-6">
-                  <label class="form-label small fw-semibold">Recipient Full Name *</label>
-                  <input type="text" class="form-control" id="formRecipientName" placeholder="e.g. John Doe" value="Charlie Jenkins" required>
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label small fw-semibold">Recipient Phone *</label>
-                  <input type="text" class="form-control" id="formRecipientPhone" placeholder="e.g. +91 91234 56789" value="+91 91234 56789" required>
-                </div>
-                <div class="col-md-8">
-                  <label class="form-label small fw-semibold">Delivery Address *</label>
-                  <textarea class="form-control" id="formRecipientAddress" rows="2" required>Flat 402, Cyber Tower Heights, Madhapur, Hyderabad</textarea>
-                </div>
-                <div class="col-md-4">
-                  <label class="form-label small fw-semibold">Postal Code *</label>
-                  <input type="text" class="form-control" id="formPostalCode" value="500081" required>
-                </div>
-              </div>
-            </div>
-
-            <!-- Step 2: Package Specifications -->
-            <div id="wizardStepContent2" class="d-none">
-              <h6 class="fw-bold mb-3 text-primary"><i class="bi bi-box-seam-fill me-1"></i> Package Specifications</h6>
-              <div class="row g-3">
-                <div class="col-12">
-                  <label class="form-label small fw-semibold">Package Item Description *</label>
-                  <input type="text" class="form-control" id="formPackageDesc" value="High-Value Titanium Swiss Watch" required>
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label small fw-semibold">Weight (in kg) *</label>
-                  <div class="input-group">
-                    <input type="number" step="0.1" min="0.1" max="100" class="form-control" id="formWeightKg" value="1.2" oninput="updatePriceCalculation()" required>
-                    <span class="input-group-text">kg</span>
-                  </div>
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label small fw-semibold">Item Category</label>
-                  <select class="form-select" id="formCategory" onchange="updatePriceCalculation()">
-                    <option value="Luxury & Jewelry">Luxury & High-Value Jewelry</option>
-                    <option value="Electronics">Electronics & Hardware</option>
-                    <option value="Medical">Medical / Cold-Chain</option>
-                    <option value="Documents">Legal & Confidential Documents</option>
-                    <option value="General">General Goods</option>
-                  </select>
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label small fw-semibold">Declared Value ($ USD)</label>
-                  <div class="input-group">
-                    <span class="input-group-text">$</span>
-                    <input type="number" class="form-control" id="formDeclaredValue" value="3500">
-                  </div>
-                </div>
-                <div class="col-md-6 d-flex align-items-center mt-4">
-                  <div class="form-check">
-                    <input class="form-check-input" type="checkbox" id="formIsFragile" checked>
-                    <label class="form-check-label fw-semibold text-danger" for="formIsFragile">
-                      <i class="bi bi-shield-fill-exclamation me-1"></i> Fragile / High-Value Cargo (Tamper Seal)
-                    </label>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Step 3: Service Tier & Dynamic Price -->
-            <div id="wizardStepContent3" class="d-none">
-              <h6 class="fw-bold mb-3 text-primary"><i class="bi bi-lightning-charge-fill me-1"></i> Choose Service Tier & Logistics Speed</h6>
-              <div class="row g-3">
-                <div class="col-md-4">
-                  <div class="service-tier-card" id="tierCardStandard" onclick="selectServiceTier('Standard')">
-                    <div class="d-flex justify-content-between align-items-start mb-2">
-                      <span class="badge bg-secondary">Economy</span>
-                      <strong class="text-primary fs-5" id="priceTierStandard">$16.50</strong>
-                    </div>
-                    <h6 class="fw-bold mb-1">Standard 3-5 Days</h6>
-                    <p class="small text-muted mb-0">Reliable road transport with end-to-end milestone tracking.</p>
-                  </div>
-                </div>
-                <div class="col-md-4">
-                  <div class="service-tier-card" id="tierCardExpress" onclick="selectServiceTier('Express')">
-                    <div class="d-flex justify-content-between align-items-start mb-2">
-                      <span class="badge bg-info text-dark">Fast</span>
-                      <strong class="text-primary fs-5" id="priceTierExpress">$28.50</strong>
-                    </div>
-                    <h6 class="fw-bold mb-1">Express 1-2 Days</h6>
-                    <p class="small text-muted mb-0">Priority dispatch with live checkpoint notifications.</p>
-                  </div>
-                </div>
-                <div class="col-md-4">
-                  <div class="service-tier-card selected" id="tierCardSameDay" onclick="selectServiceTier('Same-Day')">
-                    <div class="d-flex justify-content-between align-items-start mb-2">
-                      <span class="badge bg-danger">Ultra Fast</span>
-                      <strong class="text-primary fs-5" id="priceTierSameDay">$45.00</strong>
-                    </div>
-                    <h6 class="fw-bold mb-1">Same-Day Priority</h6>
-                    <p class="small text-muted mb-0">Dedicated courier with live GPS telemetry and OTP security.</p>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Price Breakdown Summary -->
-              <div class="card bg-light border-0 rounded-3 mt-4 p-3">
-                <div class="d-flex justify-content-between small mb-1">
-                  <span class="text-muted">Base Service Charge:</span>
-                  <span class="fw-semibold" id="summaryBasePrice">$40.00</span>
-                </div>
-                <div class="d-flex justify-content-between small mb-1">
-                  <span class="text-muted">Weight Surcharge (1.2 kg):</span>
-                  <span class="fw-semibold" id="summaryWeightPrice">$5.00</span>
-                </div>
-                <div class="d-flex justify-content-between small mb-2">
-                  <span class="text-muted">Tamper-Proof Insurance Seal:</span>
-                  <span class="fw-semibold text-success">Included Free</span>
-                </div>
-                <hr class="my-1">
-                <div class="d-flex justify-content-between fw-bold fs-6">
-                  <span>Total Calculated Cost:</span>
-                  <span class="text-primary" id="summaryTotalPrice">$45.00</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Step 4: Review, Confirmation & Generated Tracking Card -->
-            <div id="wizardStepContent4" class="d-none">
-              <div id="wizardReviewSection">
-                <h6 class="fw-bold mb-3 text-primary"><i class="bi bi-check2-circle me-1"></i> Review & Payment Confirmation</h6>
-                <div class="card border rounded-3 p-3 mb-3">
-                  <div class="row g-2 small">
-                    <div class="col-sm-6">
-                      <strong class="text-muted">Sender:</strong>
-                      <div id="reviewSenderText">Alice Vance, HITEC City</div>
-                    </div>
-                    <div class="col-sm-6">
-                      <strong class="text-muted">Recipient:</strong>
-                      <div id="reviewRecipientText">Charlie Jenkins, Madhapur</div>
-                    </div>
-                    <div class="col-sm-6">
-                      <strong class="text-muted">Package:</strong>
-                      <div id="reviewPackageText">High-Value Titanium Swiss Watch (1.2 kg)</div>
-                    </div>
-                    <div class="col-sm-6">
-                      <strong class="text-muted">Tier & Total:</strong>
-                      <div id="reviewTierText" class="fw-bold text-primary">Same-Day Priority — $45.00</div>
-                    </div>
-                  </div>
-                </div>
-                <div class="mb-3">
-                  <label class="form-label small fw-semibold">Payment Method (Simulated)</label>
-                  <select class="form-select form-select-sm">
-                    <option>Corporate Logistics Credit Account (•••• 9942)</option>
-                    <option>Visa / Mastercard Card</option>
-                  </select>
-                </div>
-              </div>
-
-              <!-- Generated Tracking ID Card (Shown After Confirmation) -->
-              <div class="d-none text-center py-3" id="wizardSuccessCard">
-                <div class="display-5 text-success mb-2"><i class="bi bi-check-circle-fill"></i></div>
-                <h5 class="fw-bold mb-1">Shipment Booked Successfully!</h5>
-                <p class="text-muted small">Cryptographic genesis hash initialized and audit log recorded.</p>
-                <div class="card bg-slate-900 text-white rounded-4 p-4 my-3 text-center mx-auto" style="max-width: 440px;">
-                  <span class="small text-slate-400 text-uppercase tracking-wider">Tracking Number</span>
-                  <h3 class="fw-bold text-primary my-2" id="generatedTrackingNum">ST-20261005-998811</h3>
-                  <div class="d-flex justify-content-center gap-2 mt-2">
-                    <button class="btn btn-sm btn-outline-light" onclick="copyGeneratedTracking()">
-                      <i class="bi bi-clipboard me-1"></i> Copy
-                    </button>
-                    <button class="btn btn-sm btn-primary" onclick="openLiveTrackingFromWizard()">
-                      <i class="bi bi-geo-alt-fill me-1"></i> View Live Status
-                    </button>
-                  </div>
-                </div>
-              </div>
+            <div id="statusModalFeedback" class="small mb-2"></div>
+            <div class="d-flex justify-content-end gap-2">
+              <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+              <button type="submit" class="btn btn-primary btn-sm px-4">Submit Update</button>
             </div>
           </form>
-        </div>
-
-        <div class="modal-footer bg-light p-3">
-          <button type="button" class="btn btn-outline-secondary" id="wizardBackBtn" onclick="prevWizardStep()" disabled>Back</button>
-          <button type="button" class="btn btn-primary px-4" id="wizardNextBtn" onclick="nextWizardStep()">Continue</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal 2: Delivery Confirmation (OTP + Signature) -->
-  <div class="modal fade" id="deliveryConfirmModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content border-0 shadow-lg rounded-4">
-        <div class="modal-header bg-slate-900 text-white p-3">
-          <h6 class="modal-title fw-bold"><i class="bi bi-patch-check-fill text-success me-1"></i> Confirm Final Handover & Delivery</h6>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body p-4">
-          <p class="small text-muted mb-3" id="deliveryConfirmShipmentText">Completing delivery for ST-20261005-481920 to Charlie Jenkins.</p>
-          
-          <!-- Recipient OTP Verification -->
-          <div class="mb-3">
-            <label class="form-label small fw-semibold">Enter 6-Digit Recipient OTP *</label>
-            <div class="input-group">
-              <input type="text" class="form-control text-center fs-5 fw-bold letter-spacing-2" id="inputDeliveryOtp" placeholder="••••••" maxlength="6">
-              <button class="btn btn-outline-secondary btn-sm" type="button" onclick="fillMockOtp()">Auto-Fill Demo OTP</button>
-            </div>
-            <div class="form-text small text-muted">Customer received OTP on their registered phone number.</div>
-          </div>
-
-          <!-- Signature Capture Canvas -->
-          <div class="mb-3">
-            <div class="d-flex justify-content-between align-items-center mb-1">
-              <label class="form-label small fw-semibold mb-0">Recipient Touch Signature *</label>
-              <button class="btn btn-sm btn-link text-muted p-0 text-decoration-none" onclick="clearSignatureCanvas()">Clear</button>
-            </div>
-            <canvas id="signatureCanvas" class="signature-canvas"></canvas>
-            <div class="form-text small text-muted">Recipient signs directly on screen with finger or stylus.</div>
-          </div>
-
-          <div class="mb-3">
-            <label class="form-label small fw-semibold">Delivery Proof Notes</label>
-            <input type="text" class="form-control form-control-sm" id="inputDeliveryNotes" value="Handed over directly to recipient at flat door. ID verified.">
-          </div>
-        </div>
-        <div class="modal-footer p-3 bg-light">
-          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="button" class="btn btn-success px-4" onclick="submitFinalDeliveryConfirmation()">
-            <i class="bi bi-check2-circle me-1"></i> Confirm & Seal Custody
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal 3: Assign Driver Modal (Admin Dispatch) -->
-  <div class="modal fade" id="assignDriverModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content border-0 shadow-lg rounded-4">
-        <div class="modal-header bg-slate-900 text-white p-3">
-          <h6 class="modal-title fw-bold"><i class="bi bi-person-plus-fill me-1"></i> Assign Courier Partner to Shipment</h6>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body p-4">
-          <input type="hidden" id="assignShipmentIdInput">
-          <div class="alert alert-light border small mb-3">
-            <strong>Target Shipment:</strong> <span id="assignTargetTrackingText">ST-20261005-551928</span><br>
-            <strong>Cargo:</strong> <span id="assignTargetCargoText">Encrypted Hardware Security Modules (4.8 kg)</span>
-          </div>
-          
-          <label class="form-label small fw-semibold">Select Available Delivery Driver *</label>
-          <div class="list-group" id="driverSelectionList">
-            <!-- Dynamically populated -->
-          </div>
-        </div>
-        <div class="modal-footer p-3 bg-light">
-          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="button" class="btn btn-primary px-4" onclick="confirmDriverAssignment()">Assign & Dispatch</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal 4: Ephemeral 1-Time Token Viewer Modal -->
-  <div class="modal fade" id="ephemeralTokenViewerModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content border-0 shadow-lg rounded-4">
-        <div class="modal-header bg-slate-900 text-white p-3">
-          <h6 class="modal-title fw-bold"><i class="bi bi-shield-lock-fill text-purple me-1"></i> 1-Time Secure Live GPS Link</h6>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body p-4">
-          <div class="alert alert-warning border-warning small mb-3">
-            <i class="bi bi-exclamation-triangle-fill me-1"></i> <strong>Anti-Replay Security Notice:</strong>
-            This ephemeral link is cryptographically hashed with SHA-256 and will <strong>burn permanently upon first view</strong>. Replay attempts are rejected with HTTP 410 Gone.
-          </div>
-          <label class="form-label small fw-semibold">Paste or Generate 1-Time Token</label>
-          <div class="input-group mb-3">
-            <input type="text" class="form-control font-monospace small" id="inputEphemeralToken" placeholder="tok_..." value="tok_991823abf8190283c48190">
-            <button class="btn btn-primary" onclick="simulateAccessEphemeralToken()">Access Live GPS</button>
-          </div>
-
-          <div class="d-none mt-3 p-3 bg-light rounded-3 border" id="ephemeralResultCard">
-            <!-- Dynamically loaded on token access -->
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal 5: Printable Shipping Receipt Modal -->
-  <div class="modal fade" id="receiptModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-      <div class="modal-content border-0 shadow-lg rounded-4" id="printableReceiptModalContent">
-        <div class="modal-header border-bottom p-4">
-          <div class="d-flex align-items-center gap-2">
-            <div class="brand-badge" style="width:32px;height:32px;font-size:1rem;">
-              <i class="bi bi-box-seam-fill"></i>
-            </div>
-            <div>
-              <h5 class="fw-bold mb-0">ShipTrack Logistics Receipt</h5>
-              <small class="text-muted">Official Delivery & Custody Proof</small>
-            </div>
-          </div>
-          <div class="no-print">
-            <button type="button" class="btn btn-outline-primary btn-sm me-2" onclick="window.print()">
-              <i class="bi bi-printer me-1"></i> Print / Save PDF
-            </button>
-            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-          </div>
-        </div>
-        <div class="modal-body p-4" id="receiptModalBody">
-          <!-- Dynamically populated receipt content -->
         </div>
       </div>
     </div>
   </div>
 
   <!-- ==============================================================================
-       AI SHIPMENT ASSISTANT FLOATING WIDGET
+       MODAL: ADMIN ASSIGN COURIER
        ============================================================================== -->
-  <button class="assistant-fab" id="assistantFabBtn" onclick="toggleAIAssistant()" title="Ask ShipTrack AI Assistant">
-    <i class="bi bi-chat-heart-fill"></i>
-  </button>
-
-  <div class="assistant-chat-panel" id="assistantChatPanel">
-    <div class="chat-header">
-      <div class="d-flex align-items-center gap-2">
-        <div class="badge bg-primary p-2 rounded-circle">
-          <i class="bi bi-robot"></i>
+  <div class="modal fade" id="modalAdminAssign" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content border-0 shadow rounded-4">
+        <div class="modal-header bg-dark text-white p-3">
+          <h6 class="modal-title fw-bold">Assign Courier to Shipment</h6>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
         </div>
-        <div>
-          <h6 class="mb-0 fw-bold small">ShipTrack AI Assistant</h6>
-          <span class="text-emerald small" style="font-size: 0.7rem;"><span class="pulse-indicator me-1"></span> Online &bull; Instant Help</span>
+        <div class="modal-body p-4">
+          <form id="formAdminAssign">
+            <input type="hidden" id="assignShipmentId">
+            <div class="mb-3">
+              <label class="form-label small fw-semibold text-secondary">Target Shipment</label>
+              <div class="form-control-plaintext font-monospace fw-bold" id="assignShipmentTrackingLabel"></div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label small fw-semibold text-secondary" for="selectAssignCourier">Select Courier *</label>
+              <select class="form-select form-select-sm" id="selectAssignCourier" required></select>
+            </div>
+            <div class="mb-3">
+              <label class="form-label small fw-semibold text-secondary" for="inputAssignNotes">Dispatch Notes</label>
+              <input type="text" class="form-control form-control-sm" id="inputAssignNotes" placeholder="e.g. Dispatched for urgent pickup">
+            </div>
+            <div id="assignModalFeedback" class="small mb-2"></div>
+            <div class="d-flex justify-content-end gap-2">
+              <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+              <button type="submit" class="btn btn-primary btn-sm px-4">Confirm Assignment</button>
+            </div>
+          </form>
         </div>
       </div>
-      <button class="btn-close btn-close-white btn-sm" onclick="toggleAIAssistant()"></button>
     </div>
+  </div>
 
-    <!-- Chat Messages Stream -->
-    <div class="chat-messages" id="chatMessagesContainer">
-      <div class="chat-bubble bubble-bot">
-        Hello! I'm your ShipTrack Logistics Assistant. I can track active packages, estimate shipping costs, or explain our single-use security links!
+  <!-- ==============================================================================
+       MODAL: PUBLIC 1-TIME TOKEN RESULT
+       ============================================================================== -->
+  <div class="modal fade" id="modalPublicTokenResult" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content border-0 shadow rounded-4">
+        <div class="modal-header bg-dark text-white p-3">
+          <h6 class="modal-title fw-bold"><i class="bi bi-shield-lock me-1"></i> Ephemeral Single-Use Live Tracking</h6>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body p-4" id="publicTokenResultBody"></div>
       </div>
-    </div>
-
-    <!-- Suggested Question Pills -->
-    <div class="p-2 border-top bg-white" id="chatSuggestionsBox">
-      <div class="small text-muted mb-1 px-1" style="font-size: 0.7rem;">Quick Questions:</div>
-      <div class="d-flex flex-wrap">
-        <span class="suggestion-pill" onclick="askAIAssistant('Where is my package TRK-1042?')">Where is my package?</span>
-        <span class="suggestion-pill" onclick="askAIAssistant('How much to ship a 5kg box?')">5kg shipping cost</span>
-        <span class="suggestion-pill" onclick="askAIAssistant('Can I update my delivery address?')">Update address</span>
-        <span class="suggestion-pill" onclick="askAIAssistant('What is the 1-time secure link?')">1-Time secure link</span>
-      </div>
-    </div>
-
-    <!-- Chat Input Box -->
-    <div class="p-2 bg-light border-top">
-      <form id="chatForm" onsubmit="handleChatSubmit(event)" class="d-flex gap-2">
-        <input type="text" class="form-control form-control-sm" id="chatInputText" placeholder="Ask anything about shipments...">
-        <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-send-fill"></i></button>
-      </form>
     </div>
   </div>
 
   <!-- Bootstrap 5 Bundle JS via CDN -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-  <!-- Mock Data Layer -->
-  <script src="js/mockData.js"></script>
-  <!-- Main Application Script -->
+  <!-- Real Application Controller (No mockData) -->
   <script src="js/app.js"></script>
 </body>
 </html>

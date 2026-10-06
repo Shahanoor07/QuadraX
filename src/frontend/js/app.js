@@ -1,1245 +1,1370 @@
 /**
  * ShipTrack: Delivery & Shipment Management (PS-05)
- * Enterprise Dashboard Application Controller
+ * Production Application Controller (Direct API Integration)
+ *
+ * Rules Enforcement:
+ * - Strict DOM textContent usage for all server and user data (XSS prevention).
+ * - Zero tokens or passwords stored in localStorage.
+ * - Zero hardcoded demo credentials in UI.
+ * - Dynamic view routing driven strictly by GET /api/auth/me server response.
  */
 
-// ==============================================================================
-// GLOBAL STATE
-// ==============================================================================
-const state = {
-  currentRole: "customer", // 'customer' | 'delivery' | 'admin'
-  currentUser: MOCK_DATA.demoUsers.customer,
-  shipments: JSON.parse(JSON.stringify(MOCK_DATA.shipments)),
-  drivers: JSON.parse(JSON.stringify(MOCK_DATA.drivers)),
-  securityEvents: JSON.parse(JSON.stringify(MOCK_DATA.securityEvents)),
-  activeTrackingId: "ST-20261005-481920",
-  courierOnline: true,
-  wizard: {
-    currentStep: 1,
-    selectedTier: "Same-Day",
-    calculatedPrice: 45.00
-  },
-  burnedTokens: new Set(["tok_burned_sample"])
+// Application State (In-Memory Only, No localStorage credentials)
+const appState = {
+  currentUser: null,
+  activeShipmentId: null,
+  activeTrackingNumber: null
 };
 
 // ==============================================================================
 // INITIALIZATION
 // ==============================================================================
 document.addEventListener("DOMContentLoaded", () => {
-  initGlobalSearch();
-  initSignaturePad();
-  renderAllViews();
+  setupEventListeners();
+  checkAuthSession();
 });
 
-function renderAllViews() {
-  updateUserNavbar();
-  renderCustomerPortal();
-  renderDeliveryPortal();
-  renderAdminPortal();
+function setupEventListeners() {
+  // Navigation / Logout
+  document.getElementById("btnNavLogout")?.addEventListener("click", handleLogout);
+  document.getElementById("btnGlobalSearch")?.addEventListener("click", handleGlobalSearch);
+  document.getElementById("globalTrackingInput")?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") handleGlobalSearch();
+  });
+
+  // Auth Tabs & Forms
+  document.getElementById("tabLoginBtn")?.addEventListener("click", () => switchAuthTab("login"));
+  document.getElementById("tabRegisterBtn")?.addEventListener("click", () => switchAuthTab("register"));
+  document.getElementById("formLogin")?.addEventListener("submit", handleLoginSubmit);
+  document.getElementById("formRegister")?.addEventListener("submit", handleRegisterSubmit);
+  document.getElementById("btnAccessPublicToken")?.addEventListener("click", handlePublicTokenAccess);
+
+  // Customer Actions
+  document.getElementById("formCreateShipment")?.addEventListener("submit", handleCreateShipmentSubmit);
+  document.getElementById("btnRefreshCustomerShipments")?.addEventListener("click", loadCustomerShipments);
+  document.getElementById("btnCloseTrackingDetail")?.addEventListener("click", closeCustomerTrackingDetail);
+  document.getElementById("btnVerifyChain")?.addEventListener("click", handleVerifyChainClick);
+  document.getElementById("btnGenerateToken")?.addEventListener("click", handleGenerateTokenClick);
+
+  // Delivery Actions
+  document.getElementById("btnRefreshDeliveryTasks")?.addEventListener("click", loadDeliveryDashboard);
+  document.getElementById("formCourierStatus")?.addEventListener("submit", handleCourierStatusSubmit);
+
+  // Admin Actions
+  document.getElementById("btnRefreshAdminData")?.addEventListener("click", loadAdminDashboard);
+  document.getElementById("tabAdminShipmentsBtn")?.addEventListener("click", () => switchAdminTab("shipments"));
+  document.getElementById("tabAdminDispatchBtn")?.addEventListener("click", () => switchAdminTab("dispatch"));
+  document.getElementById("tabAdminUsersBtn")?.addEventListener("click", () => switchAdminTab("users"));
+  document.getElementById("tabAdminSecurityBtn")?.addEventListener("click", () => switchAdminTab("security"));
+  document.getElementById("formAdminAssign")?.addEventListener("submit", handleAdminAssignSubmit);
 }
 
 // ==============================================================================
-// ROLE SWITCHER
+// SESSION AUTHENTICATION & VIEW ROUTING
 // ==============================================================================
-function switchRole(role) {
-  state.currentRole = role;
-  state.currentUser = MOCK_DATA.demoUsers[role] || MOCK_DATA.demoUsers.customer;
+async function checkAuthSession() {
+  try {
+    const res = await fetch("/api/auth/me", { method: "GET" });
+    if (res.status === 200) {
+      const data = await res.json();
+      appState.currentUser = data.user;
+      renderAuthenticatedLayout(data.user);
+    } else {
+      appState.currentUser = null;
+      renderUnauthenticatedLayout();
+    }
+  } catch (err) {
+    appState.currentUser = null;
+    renderUnauthenticatedLayout();
+  }
+}
 
-  // Update Navbar Role Buttons
-  document.querySelectorAll(".role-btn").forEach(btn => btn.classList.remove("active"));
-  if (role === "customer") document.getElementById("btnRoleCustomer")?.classList.add("active");
-  if (role === "delivery") document.getElementById("btnRoleDelivery")?.classList.add("active");
-  if (role === "admin") document.getElementById("btnRoleAdmin")?.classList.add("active");
+function renderAuthenticatedLayout(user) {
+  // Update Navbar Session Display
+  const navUserBadge = document.getElementById("navUserBadge");
+  const navUserName = document.getElementById("navUserName");
+  const navUserRole = document.getElementById("navUserRole");
+  const btnNavLogout = document.getElementById("btnNavLogout");
 
-  // Toggle View Panels
-  const custView = document.getElementById("customerPortalView");
-  const delivView = document.getElementById("deliveryPortalView");
-  const adminView = document.getElementById("adminPortalView");
+  if (navUserName) navUserName.textContent = user.full_name || user.username;
+  if (navUserRole) navUserRole.textContent = user.role;
+  navUserBadge?.classList.remove("d-none");
+  btnNavLogout?.classList.remove("d-none");
+
+  // Hide Auth Screen
+  document.getElementById("authView")?.classList.add("d-none");
+
+  // Show only the dashboard for the role returned by the server
+  const custView = document.getElementById("customerView");
+  const delivView = document.getElementById("deliveryView");
+  const adminView = document.getElementById("adminView");
 
   custView?.classList.add("d-none");
   delivView?.classList.add("d-none");
   adminView?.classList.add("d-none");
 
-  if (role === "customer") {
+  if (user.role === "customer") {
     custView?.classList.remove("d-none");
-    renderCustomerPortal();
-  } else if (role === "delivery") {
+    loadCustomerShipments();
+  } else if (user.role === "delivery_person") {
     delivView?.classList.remove("d-none");
-    renderDeliveryPortal();
-  } else if (role === "admin") {
+    loadDeliveryDashboard();
+  } else if (user.role === "admin") {
     adminView?.classList.remove("d-none");
-    renderAdminPortal();
-  }
-
-  updateUserNavbar();
-}
-
-function updateUserNavbar() {
-  const avatarEl = document.getElementById("navbarUserAvatar");
-  const nameEl = document.getElementById("navbarUserName");
-  const roleEl = document.getElementById("navbarUserRole");
-
-  if (avatarEl) avatarEl.src = state.currentUser.avatar;
-  if (nameEl) nameEl.textContent = state.currentUser.full_name;
-  if (roleEl) {
-    if (state.currentRole === "customer") roleEl.textContent = "Customer";
-    if (state.currentRole === "delivery") roleEl.textContent = "Delivery Partner";
-    if (state.currentRole === "admin") roleEl.textContent = "Fleet Ops Admin";
+    loadAdminDashboard();
   }
 }
 
-// ==============================================================================
-// 1. CUSTOMER PORTAL CONTROLLER
-// ==============================================================================
-function renderCustomerPortal() {
-  renderCustomerMetrics();
-  renderLiveTrackingCard();
-  renderCustomerHistoryTable("all");
+function renderUnauthenticatedLayout() {
+  // Hide Navbar Session Display
+  document.getElementById("navUserBadge")?.classList.add("d-none");
+  document.getElementById("btnNavLogout")?.classList.add("d-none");
+
+  // Hide All Role Dashboards
+  document.getElementById("customerView")?.classList.add("d-none");
+  document.getElementById("deliveryView")?.classList.add("d-none");
+  document.getElementById("adminView")?.classList.add("d-none");
+
+  // Show Auth Screen
+  document.getElementById("authView")?.classList.remove("d-none");
+  switchAuthTab("login");
 }
 
-function renderCustomerMetrics() {
-  const myShipments = state.shipments.filter(s => s.customer_id === 1);
-  const activeCount = myShipments.filter(s => s.current_status !== "Delivered" && s.current_status !== "Cancelled").length;
-  const inTransitCount = myShipments.filter(s => s.current_status === "In Transit" || s.current_status === "Out for Delivery").length;
-  const deliveredCount = myShipments.filter(s => s.current_status === "Delivered").length;
-  const totalSpent = myShipments.reduce((acc, s) => acc + (s.cost || 0), 0);
+function switchAuthTab(tab) {
+  const loginTab = document.getElementById("tabLoginBtn");
+  const regTab = document.getElementById("tabRegisterBtn");
+  const formLogin = document.getElementById("formLogin");
+  const formRegister = document.getElementById("formRegister");
 
-  const actEl = document.getElementById("custMetricActive");
-  const trnEl = document.getElementById("custMetricTransit");
-  const delEl = document.getElementById("custMetricDelivered");
-  const spntEl = document.getElementById("custMetricSpent");
+  clearFeedback("loginFeedback");
+  clearFeedback("registerFeedback");
 
-  if (actEl) actEl.textContent = activeCount;
-  if (trnEl) trnEl.textContent = inTransitCount;
-  if (delEl) delEl.textContent = deliveredCount;
-  if (spntEl) spntEl.textContent = `$${totalSpent.toFixed(2)}`;
-}
-
-function renderLiveTrackingCard() {
-  const shipment = state.shipments.find(s => s.tracking_number === state.activeTrackingId) || state.shipments[0];
-  if (!shipment) return;
-
-  // Header badges
-  const badgeEl = document.getElementById("activeTrackingBadge");
-  const statusEl = document.getElementById("activeStatusPill");
-  const fragileEl = document.getElementById("activeFragilePill");
-
-  if (badgeEl) badgeEl.textContent = shipment.tracking_number;
-  if (statusEl) {
-    statusEl.className = `status-badge ${getStatusBadgeClass(shipment.current_status)}`;
-    statusEl.innerHTML = `<i class="${getStatusIcon(shipment.current_status)}"></i> ${shipment.current_status}`;
-  }
-  if (fragileEl) {
-    fragileEl.style.display = shipment.is_fragile ? "inline-block" : "none";
-  }
-
-  // Horizontal Stepper
-  renderHorizontalStepper(shipment);
-
-  // Driver details card
-  const driverNameEl = document.getElementById("activeDriverName");
-  const driverVehicleEl = document.getElementById("activeDriverVehicle");
-  const driverPortraitEl = document.getElementById("activeDriverPortrait");
-  const driverCallBtn = document.getElementById("activeDriverCallBtn");
-
-  if (driverNameEl) driverNameEl.textContent = shipment.driver_name || "Awaiting Driver Assignment";
-  if (driverVehicleEl) {
-    driverVehicleEl.innerHTML = shipment.driver_name 
-      ? `<i class="bi bi-truck me-1"></i> Electric Cargo Van (TS-09-EQ-4421)`
-      : `<i class="bi bi-clock me-1"></i> Driver assignment in progress at central hub`;
-  }
-  if (driverPortraitEl) {
-    driverPortraitEl.src = shipment.driver_avatar || MOCK_DATA.courierPortrait;
-  }
-  if (driverCallBtn && shipment.driver_phone) {
-    driverCallBtn.href = `tel:${shipment.driver_phone}`;
-  }
-
-  // Telemetry updates
-  const coordsBadge = document.getElementById("telemetryCoordsBadge");
-  const speedVal = document.getElementById("telemetrySpeedVal");
-  const progressEl = document.getElementById("telemetryProgressBar");
-
-  if (shipment.telemetry) {
-    if (coordsBadge) coordsBadge.textContent = `${shipment.telemetry.latitude}° N, ${shipment.telemetry.longitude}° E`;
-    if (speedVal) speedVal.textContent = `${shipment.telemetry.speed_kmh} km/h`;
-  }
-
-  if (progressEl) {
-    const progressMap = {
-      "Order Placed": "10%",
-      "Picked Up": "35%",
-      "In Transit": "65%",
-      "Out for Delivery": "85%",
-      "Delivered": "100%",
-      "Cancelled": "0%"
-    };
-    progressEl.style.width = progressMap[shipment.current_status] || "50%";
-  }
-}
-
-function renderHorizontalStepper(shipment) {
-  const container = document.getElementById("horizontalStepperContainer");
-  if (!container) return;
-
-  const stages = [
-    { name: "Order Placed", icon: "bi-check2-circle" },
-    { name: "Picked Up", icon: "bi-box-arrow-up" },
-    { name: "In Transit", icon: "bi-truck" },
-    { name: "Out for Delivery", icon: "bi-geo-alt" },
-    { name: "Delivered", icon: "bi-house-check" }
-  ];
-
-  const currentIdx = stages.findIndex(st => st.name === shipment.current_status);
-
-  let html = "";
-  stages.forEach((st, idx) => {
-    let stateClass = "";
-    if (shipment.current_status === "Cancelled") {
-      stateClass = "";
-    } else if (idx < currentIdx || shipment.current_status === "Delivered") {
-      stateClass = "done";
-    } else if (idx === currentIdx) {
-      stateClass = "current";
-    }
-
-    const timelineItem = shipment.timeline ? shipment.timeline.find(t => t.status === st.name) : null;
-    const timeText = timelineItem ? timelineItem.timestamp.split(" ")[1] : "--:--";
-
-    html += `
-      <div class="tracking-step ${stateClass}">
-        <div class="tracking-step-circle">
-          <i class="bi ${stateClass === 'done' ? 'bi-check-lg' : st.icon}"></i>
-        </div>
-        <div class="tracking-step-title">${st.name}</div>
-        <div class="tracking-step-time">${timelineItem ? timeText : ''}</div>
-      </div>
-    `;
-  });
-
-  container.innerHTML = html;
-}
-
-function renderCustomerHistoryTable(filter) {
-  const tbody = document.getElementById("customerHistoryTableBody");
-  if (!tbody) return;
-
-  let list = state.shipments.filter(s => s.customer_id === 1);
-  if (filter === "active") {
-    list = list.filter(s => s.current_status !== "Delivered" && s.current_status !== "Cancelled");
-  } else if (filter === "delivered") {
-    list = list.filter(s => s.current_status === "Delivered");
-  } else if (filter === "cancelled") {
-    list = list.filter(s => s.current_status === "Cancelled");
-  }
-
-  if (list.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-4">No shipments matching filter.</td></tr>`;
-    return;
-  }
-
-  tbody.innerHTML = list.map(s => `
-    <tr>
-      <td>
-        <span class="font-monospace fw-bold text-primary cursor-pointer" onclick="setActiveTracking('${s.tracking_number}')">
-          ${s.tracking_number}
-        </span>
-        <div class="small text-muted">${s.package_description}</div>
-      </td>
-      <td>
-        <div class="fw-semibold">${s.recipient_name}</div>
-        <small class="text-muted text-truncate d-inline-block" style="max-width: 220px;">${s.recipient_address}</small>
-      </td>
-      <td>
-        <div class="small fw-semibold">${s.sender_name}</div>
-        <small class="text-muted">${s.created_at.split(' ')[0]}</small>
-      </td>
-      <td>
-        <span class="status-badge ${getStatusBadgeClass(s.current_status)}">
-          <i class="${getStatusIcon(s.current_status)}"></i> ${s.current_status}
-        </span>
-      </td>
-      <td>
-        <span class="badge bg-light text-dark border">${s.weight_kg} kg</span>
-        <div class="small text-muted">${s.tier || 'Standard'}</div>
-      </td>
-      <td class="text-end">
-        <div class="btn-group btn-group-sm">
-          <button class="btn btn-outline-primary" title="View Live Tracking" onclick="setActiveTracking('${s.tracking_number}')">
-            <i class="bi bi-geo-alt"></i>
-          </button>
-          <button class="btn btn-outline-secondary" title="View Receipt" onclick="openReceiptModal('${s.tracking_number}')">
-            <i class="bi bi-receipt"></i>
-          </button>
-          <button class="btn btn-outline-purple text-purple border-purple" title="1-Time Secure Link" onclick="generate1TimeLink('${s.tracking_number}')">
-            <i class="bi bi-link-45deg"></i>
-          </button>
-          ${s.current_status === 'Order Placed' ? `
-            <button class="btn btn-outline-danger" title="Cancel Shipment" onclick="cancelShipment(${s.id})">
-              <i class="bi bi-x-circle"></i>
-            </button>
-          ` : ''}
-        </div>
-      </td>
-    </tr>
-  `).join('');
-}
-
-function filterHistoryTable(filter, btn) {
-  document.querySelectorAll(".btn-group button").forEach(b => b.classList.remove("active"));
-  if (btn) btn.classList.add("active");
-  renderCustomerHistoryTable(filter);
-}
-
-function setActiveTracking(trackingNum) {
-  state.activeTrackingId = trackingNum;
-  switchRole("customer");
-  renderLiveTrackingCard();
-  const card = document.getElementById("liveTrackingCardContainer");
-  if (card) {
-    card.scrollIntoView({ behavior: "smooth", block: "start" });
-    card.classList.add("border-primary");
-    setTimeout(() => card.classList.remove("border-primary"), 1500);
-  }
-}
-
-function cancelShipment(shipmentId) {
-  const s = state.shipments.find(item => item.id === shipmentId);
-  if (!s) return;
-  if (s.current_status !== "Order Placed") {
-    alert("Only shipments in 'Order Placed' status can be cancelled.");
-    return;
-  }
-
-  if (confirm(`Are you sure you want to cancel shipment ${s.tracking_number}?`)) {
-    s.current_status = "Cancelled";
-    s.timeline.push({
-      status: "Cancelled",
-      location: "Customer Service Portal",
-      notes: "Shipment cancelled by customer request.",
-      timestamp: new Date().toISOString().replace("T", " ").substring(0, 19),
-      updater: state.currentUser.full_name,
-      prev_hash: s.timeline[s.timeline.length - 1].record_hash,
-      record_hash: "cancelled_hash_" + Math.random().toString(36).substring(2, 10)
-    });
-    renderCustomerPortal();
-  }
-}
-
-function verifyActiveShipmentChain() {
-  const shipment = state.shipments.find(s => s.tracking_number === state.activeTrackingId);
-  if (!shipment) return;
-
-  const alertEl = document.getElementById("custodyAuditAlert");
-  const detailsEl = document.getElementById("custodyAuditDetails");
-  if (!alertEl || !detailsEl) return;
-
-  const blockCount = shipment.timeline ? shipment.timeline.length : 1;
-  const lastHash = shipment.timeline && shipment.timeline.length > 0 
-    ? shipment.timeline[shipment.timeline.length - 1].record_hash 
-    : "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
-
-  detailsEl.innerHTML = `
-    <strong>Chain Length:</strong> ${blockCount} cryptographic blocks verified.<br>
-    <strong>Genesis Linkage:</strong> <code>0000000000000000000000000000000000000000000000000000000000000000</code><br>
-    <strong>Latest Head Hash:</strong> <code>${lastHash}</code><br>
-    <strong>Integrity Result:</strong> VALID (No tampering detected).
-  `;
-
-  alertEl.classList.remove("d-none");
-}
-
-function generate1TimeLinkForActive() {
-  generate1TimeLink(state.activeTrackingId);
-}
-
-function generate1TimeLink(trackingNum) {
-  const rawToken = "tok_" + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-  const inputEl = document.getElementById("inputEphemeralToken");
-  if (inputEl) inputEl.value = rawToken;
-
-  const modalEl = document.getElementById("ephemeralTokenViewerModal");
-  if (modalEl) {
-    const modal = new bootstrap.Modal(modalEl);
-    modal.show();
-  }
-}
-
-function simulateAccessEphemeralToken() {
-  const token = document.getElementById("inputEphemeralToken").value.trim();
-  const resCard = document.getElementById("ephemeralResultCard");
-  if (!resCard) return;
-
-  if (state.burnedTokens.has(token)) {
-    // REPLAY ATTACK DETECTED
-    resCard.className = "mt-3 p-3 bg-danger-subtle text-danger rounded-3 border border-danger";
-    resCard.innerHTML = `
-      <h6 class="fw-bold"><i class="bi bi-shield-x fs-5 me-1"></i> HTTP 410 Gone: REPLAY ATTACK BLOCKED</h6>
-      <p class="small mb-0">This single-use tracking link has already been used and permanently burned. Replay access is rejected and logged in security telemetry.</p>
-    `;
-    resCard.classList.remove("d-none");
-
-    // Log security event
-    state.securityEvents.unshift({
-      id: Date.now(),
-      event_type: "REPLAY_ATTACK_DETECTED",
-      user_id: null,
-      ip: "127.0.0.1",
-      path: `/api/tracking/live/${token.substring(0, 12)}...`,
-      details: "Replay attempt on burned 1-time tracking token.",
-      created_at: new Date().toISOString().replace("T", " ").substring(0, 19)
-    });
-    renderAdminPortal();
-    return;
-  }
-
-  // First access: BURN IT
-  state.burnedTokens.add(token);
-
-  const activeShipment = state.shipments.find(s => s.tracking_number === state.activeTrackingId) || state.shipments[0];
-  resCard.className = "mt-3 p-3 bg-success-subtle text-success-emphasis rounded-3 border border-success";
-  resCard.innerHTML = `
-    <div class="d-flex justify-content-between align-items-center mb-2">
-      <h6 class="fw-bold mb-0 text-success"><i class="bi bi-check-circle-fill me-1"></i> Live GPS Telemetry Authorized</h6>
-      <span class="badge bg-danger">TOKEN BURNED</span>
-    </div>
-    <div class="small">
-      <strong>Shipment:</strong> ${activeShipment.tracking_number} (${activeShipment.package_description})<br>
-      <strong>Current Status:</strong> ${activeShipment.current_status}<br>
-      <strong>Live Coordinates:</strong> 17.4485° N, 78.3752° E (Speed: 38.5 km/h)<br>
-      <strong>Notice:</strong> This link is now invalid for future requests (Anti-Replay Guarantee).
-    </div>
-  `;
-  resCard.classList.remove("d-none");
-}
-
-// ==============================================================================
-// 2. CREATE SHIPMENT MULTI-STEP WIZARD
-// ==============================================================================
-function jumpToWizardStep(stepNum) {
-  if (stepNum > state.wizard.currentStep + 1) return;
-  state.wizard.currentStep = stepNum;
-  updateWizardUI();
-}
-
-function nextWizardStep() {
-  if (state.wizard.currentStep < 4) {
-    state.wizard.currentStep++;
-    updateWizardUI();
+  if (tab === "login") {
+    loginTab?.classList.add("active");
+    regTab?.classList.remove("active");
+    formLogin?.classList.remove("d-none");
+    formRegister?.classList.add("d-none");
   } else {
-    // Confirm and generate shipment
-    submitCreateShipment();
+    regTab?.classList.add("active");
+    loginTab?.classList.remove("active");
+    formRegister?.classList.remove("d-none");
+    formLogin?.classList.add("d-none");
   }
-}
-
-function prevWizardStep() {
-  if (state.wizard.currentStep > 1) {
-    state.wizard.currentStep--;
-    updateWizardUI();
-  }
-}
-
-function updateWizardUI() {
-  const step = state.wizard.currentStep;
-
-  // Header circles
-  for (let i = 1; i <= 4; i++) {
-    const header = document.getElementById(`wizardStepHeader${i}`);
-    if (header) {
-      header.classList.remove("active", "completed");
-      if (i === step) header.classList.add("active");
-      else if (i < step) header.classList.add("completed");
-    }
-
-    const content = document.getElementById(`wizardStepContent${i}`);
-    if (content) {
-      content.classList.toggle("d-none", i !== step);
-    }
-  }
-
-  // Buttons
-  const backBtn = document.getElementById("wizardBackBtn");
-  const nextBtn = document.getElementById("wizardNextBtn");
-
-  if (backBtn) backBtn.disabled = step === 1;
-  if (nextBtn) {
-    if (step === 4) {
-      nextBtn.textContent = "Confirm & Book Shipment";
-      nextBtn.className = "btn btn-success px-4";
-      populateWizardReviewSummary();
-    } else {
-      nextBtn.textContent = "Continue";
-      nextBtn.className = "btn btn-primary px-4";
-    }
-  }
-}
-
-function selectServiceTier(tier) {
-  state.wizard.selectedTier = tier;
-  document.querySelectorAll(".service-tier-card").forEach(c => c.classList.remove("selected"));
-
-  if (tier === "Standard") document.getElementById("tierCardStandard")?.classList.add("selected");
-  if (tier === "Express") document.getElementById("tierCardExpress")?.classList.add("selected");
-  if (tier === "Same-Day") document.getElementById("tierCardSameDay")?.classList.add("selected");
-
-  updatePriceCalculation();
-}
-
-function updatePriceCalculation() {
-  const weightInput = document.getElementById("formWeightKg");
-  const weight = parseFloat(weightInput ? weightInput.value : 1.2) || 1.0;
-  const tier = state.wizard.selectedTier;
-
-  let base = 12.00;
-  let perKg = 2.50;
-
-  if (tier === "Express") {
-    base = 24.50;
-    perKg = 4.00;
-  } else if (tier === "Same-Day") {
-    base = 40.00;
-    perKg = 5.00;
-  }
-
-  const weightCost = weight * perKg;
-  const total = base + weightCost;
-  state.wizard.calculatedPrice = total;
-
-  const baseEl = document.getElementById("summaryBasePrice");
-  const weightEl = document.getElementById("summaryWeightPrice");
-  const totalEl = document.getElementById("summaryTotalPrice");
-
-  if (baseEl) baseEl.textContent = `$${base.toFixed(2)}`;
-  if (weightEl) weightEl.textContent = `$${weightCost.toFixed(2)}`;
-  if (totalEl) totalEl.textContent = `$${total.toFixed(2)}`;
-}
-
-function populateWizardReviewSummary() {
-  const senderName = document.getElementById("formSenderName")?.value || "Alice Vance";
-  const senderAddr = document.getElementById("formSenderAddress")?.value || "HITEC City";
-  const recipName = document.getElementById("formRecipientName")?.value || "Charlie Jenkins";
-  const recipAddr = document.getElementById("formRecipientAddress")?.value || "Madhapur";
-  const packageDesc = document.getElementById("formPackageDesc")?.value || "High-Value Item";
-  const weight = document.getElementById("formWeightKg")?.value || "1.2";
-
-  const revSender = document.getElementById("reviewSenderText");
-  const revRecip = document.getElementById("reviewRecipientText");
-  const revPkg = document.getElementById("reviewPackageText");
-  const revTier = document.getElementById("reviewTierText");
-
-  if (revSender) revSender.textContent = `${senderName}, ${senderAddr}`;
-  if (revRecip) revRecip.textContent = `${recipName}, ${recipAddr}`;
-  if (revPkg) revPkg.textContent = `${packageDesc} (${weight} kg)`;
-  if (revTier) revTier.textContent = `${state.wizard.selectedTier} — $${state.wizard.calculatedPrice.toFixed(2)}`;
-}
-
-function submitCreateShipment() {
-  const randomSuffix = Math.floor(100000 + Math.random() * 900000);
-  const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
-  const newTrackingNumber = `ST-${dateStr}-${randomSuffix}`;
-  const nowStr = new Date().toISOString().replace("T", " ").substring(0, 19);
-
-  const newShipment = {
-    id: Date.now(),
-    tracking_number: newTrackingNumber,
-    customer_id: 1,
-    customer_name: document.getElementById("formSenderName")?.value || "Alice Vance",
-    assigned_delivery_id: null,
-    driver_name: null,
-    driver_phone: null,
-    driver_avatar: null,
-    sender_name: document.getElementById("formSenderName")?.value || "Alice Vance",
-    sender_address: document.getElementById("formSenderAddress")?.value || "HITEC City, Hyderabad",
-    recipient_name: document.getElementById("formRecipientName")?.value || "Charlie Jenkins",
-    recipient_address: document.getElementById("formRecipientAddress")?.value || "Madhapur, Hyderabad",
-    recipient_phone: document.getElementById("formRecipientPhone")?.value || "+91 91234 56789",
-    postal_code: document.getElementById("formPostalCode")?.value || "500081",
-    package_description: document.getElementById("formPackageDesc")?.value || "High-Value Cargo",
-    weight_kg: parseFloat(document.getElementById("formWeightKg")?.value) || 1.2,
-    tier: state.wizard.selectedTier,
-    declared_value: parseFloat(document.getElementById("formDeclaredValue")?.value) || 1000,
-    cost: state.wizard.calculatedPrice,
-    current_status: "Order Placed",
-    created_at: nowStr,
-    updated_at: nowStr,
-    is_fragile: document.getElementById("formIsFragile")?.checked || false,
-    otp: Math.floor(100000 + Math.random() * 900000).toString(),
-    timeline: [
-      {
-        status: "Order Placed",
-        location: "Customer Booking Station",
-        notes: "Order placed. Sealed with tamper-evident genesis block.",
-        timestamp: nowStr,
-        updater: "Alice Vance",
-        prev_hash: "0000000000000000000000000000000000000000000000000000000000000000",
-        record_hash: "genesis_hash_" + Math.random().toString(36).substring(2, 10)
-      }
-    ]
-  };
-
-  state.shipments.unshift(newShipment);
-  state.activeTrackingId = newTrackingNumber;
-
-  // Show Success Card inside wizard modal
-  document.getElementById("wizardReviewSection")?.classList.add("d-none");
-  const successCard = document.getElementById("wizardSuccessCard");
-  const genNum = document.getElementById("generatedTrackingNum");
-  if (successCard) successCard.classList.remove("d-none");
-  if (genNum) genNum.textContent = newTrackingNumber;
-
-  document.getElementById("wizardBackBtn")?.classList.add("d-none");
-  document.getElementById("wizardNextBtn")?.classList.add("d-none");
-
-  // Re-render portals
-  renderCustomerPortal();
-  renderAdminPortal();
-}
-
-function copyGeneratedTracking() {
-  const trk = document.getElementById("generatedTrackingNum")?.textContent;
-  if (trk) {
-    navigator.clipboard?.writeText(trk);
-    alert(`Copied tracking number ${trk} to clipboard!`);
-  }
-}
-
-function openLiveTrackingFromWizard() {
-  const modalEl = document.getElementById("createShipmentModal");
-  if (modalEl) {
-    const modal = bootstrap.Modal.getInstance(modalEl);
-    modal?.hide();
-  }
-  setActiveTracking(state.activeTrackingId);
 }
 
 // ==============================================================================
-// 3. DELIVERY-PERSON PORTAL CONTROLLER
+// AUTHENTICATION HANDLERS
 // ==============================================================================
-function renderDeliveryPortal() {
-  const container = document.getElementById("courierQueueContainer");
-  if (!container) return;
-
-  const assigned = state.shipments.filter(s => s.assigned_delivery_id === 2 && s.current_status !== "Cancelled");
-  const badgeEl = document.getElementById("courierQueueCountBadge");
-  if (badgeEl) badgeEl.textContent = `${assigned.length} Active Tasks`;
-
-  if (assigned.length === 0) {
-    container.innerHTML = `<div class="col-12"><div class="alert alert-light text-center py-4">No active delivery tasks assigned. Ready for dispatch!</div></div>`;
-    return;
-  }
-
-  container.innerHTML = assigned.map(s => {
-    let priorityClass = "";
-    let priorityLabel = "Standard Route";
-    if (s.is_fragile) {
-      priorityClass = "priority-urgent";
-      priorityLabel = "High-Value / Fragile";
-    }
-
-    return `
-      <div class="col-md-6 col-xl-4">
-        <div class="courier-task-card ${priorityClass}">
-          <div class="d-flex justify-content-between align-items-start mb-2">
-            <span class="badge bg-dark">${s.tracking_number}</span>
-            <span class="badge ${s.is_fragile ? 'bg-danger-subtle text-danger border border-danger-subtle' : 'bg-secondary'}">${priorityLabel}</span>
-          </div>
-          <h6 class="fw-bold mb-1">${s.recipient_name}</h6>
-          <p class="small text-muted mb-2"><i class="bi bi-geo-alt-fill text-danger me-1"></i>${s.recipient_address}</p>
-          <div class="d-flex justify-content-between small text-muted border-top border-bottom py-2 mb-3">
-            <span><strong>Cargo:</strong> ${s.package_description}</span>
-            <span><strong>Weight:</strong> ${s.weight_kg} kg</span>
-          </div>
-          <div class="d-flex justify-content-between align-items-center">
-            <span class="status-badge ${getStatusBadgeClass(s.current_status)}">
-              <i class="${getStatusIcon(s.current_status)}"></i> ${s.current_status}
-            </span>
-            <div class="btn-group btn-group-sm">
-              <a href="tel:${s.recipient_phone}" class="btn btn-outline-secondary" title="Call Recipient">
-                <i class="bi bi-telephone"></i>
-              </a>
-              <button class="btn btn-outline-primary" title="Push GPS Ping" onclick="simulateGpsPing(${s.id})">
-                <i class="bi bi-broadcast"></i>
-              </button>
-              ${getCourierActionButton(s)}
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
-  }).join('');
-}
-
-function getCourierActionButton(shipment) {
-  if (shipment.current_status === "Order Placed") {
-    return `<button class="btn btn-primary" onclick="advanceCourierStatus(${shipment.id}, 'Picked Up')">Confirm Pickup</button>`;
-  } else if (shipment.current_status === "Picked Up") {
-    return `<button class="btn btn-info text-white" onclick="advanceCourierStatus(${shipment.id}, 'In Transit')">Start Route</button>`;
-  } else if (shipment.current_status === "In Transit") {
-    return `<button class="btn btn-purple text-white bg-purple" onclick="advanceCourierStatus(${shipment.id}, 'Out for Delivery')">Out for Delivery</button>`;
-  } else if (shipment.current_status === "Out for Delivery") {
-    return `<button class="btn btn-success" onclick="openDeliveryConfirmModal(${shipment.id})">Mark Delivered</button>`;
-  } else {
-    return `<button class="btn btn-secondary" disabled>Delivered</button>`;
-  }
-}
-
-function advanceCourierStatus(shipmentId, newStatus) {
-  const s = state.shipments.find(item => item.id === shipmentId);
-  if (!s) return;
-
-  const nowStr = new Date().toISOString().replace("T", " ").substring(0, 19);
-  s.current_status = newStatus;
-  s.updated_at = nowStr;
-
-  s.timeline.push({
-    status: newStatus,
-    location: "Courier Mobile Hub (HITEC Corridor)",
-    notes: `Courier Rajesh Kumar advanced status to ${newStatus}.`,
-    timestamp: nowStr,
-    updater: "Rajesh Kumar (Courier Alpha)",
-    prev_hash: s.timeline[s.timeline.length - 1].record_hash,
-    record_hash: "hash_" + Math.random().toString(36).substring(2, 10)
-  });
-
-  renderDeliveryPortal();
-  renderCustomerPortal();
-}
-
-function simulateGpsPing(shipmentId) {
-  const s = state.shipments.find(item => item.id === shipmentId);
-  if (!s) return;
-
-  const latOffset = (Math.random() - 0.5) * 0.01;
-  const lngOffset = (Math.random() - 0.5) * 0.01;
-  s.telemetry = {
-    latitude: +(17.4485 + latOffset).toFixed(4),
-    longitude: +(78.3752 + lngOffset).toFixed(4),
-    speed_kmh: Math.floor(30 + Math.random() * 25),
-    heading_degrees: 145,
-    battery_pct: 82,
-    timestamp: new Date().toISOString().replace("T", " ").substring(0, 19)
-  };
-
-  alert(`GPS Telemetry broadcasted for ${s.tracking_number}: Lat ${s.telemetry.latitude}, Long ${s.telemetry.longitude}`);
-  renderCustomerPortal();
-}
-
-function toggleCourierAvailability(toggleEl) {
-  state.courierOnline = toggleEl.checked;
-  const badgeEl = document.getElementById("courierStatusBadge");
-  if (badgeEl) {
-    badgeEl.className = state.courierOnline 
-      ? "badge bg-success-subtle text-success border border-success-subtle" 
-      : "badge bg-secondary-subtle text-secondary border border-secondary-subtle";
-    badgeEl.innerHTML = state.courierOnline 
-      ? `<span class="pulse-indicator me-1"></span> Online` 
-      : `<i class="bi bi-moon-fill me-1"></i> Offline`;
-  }
-}
-
-// Delivery Handover Modal (OTP + Signature)
-let pendingDeliveryShipmentId = null;
-
-function openDeliveryConfirmModal(shipmentId) {
-  pendingDeliveryShipmentId = shipmentId;
-  const s = state.shipments.find(item => item.id === shipmentId);
-  if (!s) return;
-
-  const textEl = document.getElementById("deliveryConfirmShipmentText");
-  if (textEl) textEl.textContent = `Completing delivery for ${s.tracking_number} to ${s.recipient_name} at ${s.recipient_address}.`;
-
-  const inputOtp = document.getElementById("inputDeliveryOtp");
-  if (inputOtp) inputOtp.value = "";
-
-  clearSignatureCanvas();
-
-  const modalEl = document.getElementById("deliveryConfirmModal");
-  if (modalEl) {
-    const modal = new bootstrap.Modal(modalEl);
-    modal.show();
-  }
-}
-
-function fillMockOtp() {
-  const s = state.shipments.find(item => item.id === pendingDeliveryShipmentId);
-  const inputOtp = document.getElementById("inputDeliveryOtp");
-  if (inputOtp) inputOtp.value = s?.otp || "849201";
-}
-
-function submitFinalDeliveryConfirmation() {
-  const s = state.shipments.find(item => item.id === pendingDeliveryShipmentId);
-  if (!s) return;
-
-  const enteredOtp = document.getElementById("inputDeliveryOtp")?.value.trim();
-  if (!enteredOtp || enteredOtp.length < 6) {
-    alert("Please enter the valid 6-digit recipient OTP.");
-    return;
-  }
-
-  const nowStr = new Date().toISOString().replace("T", " ").substring(0, 19);
-  s.current_status = "Delivered";
-  s.updated_at = nowStr;
-
-  s.timeline.push({
-    status: "Delivered",
-    location: s.recipient_address,
-    notes: `Delivered successfully. Recipient signature captured and verified via OTP ${enteredOtp}.`,
-    timestamp: nowStr,
-    updater: "Rajesh Kumar (Courier Alpha)",
-    prev_hash: s.timeline[s.timeline.length - 1].record_hash,
-    record_hash: "delivered_block_" + Math.random().toString(36).substring(2, 10)
-  });
-
-  const modalEl = document.getElementById("deliveryConfirmModal");
-  if (modalEl) {
-    const modal = bootstrap.Modal.getInstance(modalEl);
-    modal?.hide();
-  }
-
-  alert(`Shipment ${s.tracking_number} successfully marked Delivered! Cryptographic custody sealed.`);
-  renderDeliveryPortal();
-  renderCustomerPortal();
-}
-
-// ==============================================================================
-// 4. ADMIN MANAGEMENT PORTAL CONTROLLER
-// ==============================================================================
-function renderAdminPortal() {
-  renderUnassignedShipments();
-  renderAdminAllShipments();
-  renderAdminDrivers();
-  renderAdminSecurityEvents();
-}
-
-function renderUnassignedShipments() {
-  const tbody = document.getElementById("unassignedShipmentsTableBody");
-  const countBadge = document.getElementById("unassignedCountBadge");
-  if (!tbody) return;
-
-  const unassigned = state.shipments.filter(s => s.assigned_delivery_id === null && s.current_status !== "Cancelled");
-  if (countBadge) countBadge.textContent = `${unassigned.length} Awaiting Dispatch`;
-
-  if (unassigned.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="6" class="text-center text-success py-3"><i class="bi bi-check-circle-fill me-1"></i> All shipments have been dispatched!</td></tr>`;
-    return;
-  }
-
-  tbody.innerHTML = unassigned.map(s => `
-    <tr>
-      <td><span class="font-monospace fw-bold text-primary">${s.tracking_number}</span></td>
-      <td><strong>${s.customer_name}</strong></td>
-      <td><small class="text-muted">${s.sender_address}</small></td>
-      <td><small class="text-muted">${s.recipient_address}</small></td>
-      <td><span class="badge bg-light text-dark border">${s.weight_kg} kg</span></td>
-      <td class="text-end">
-        <button class="btn btn-sm btn-primary" onclick="openAssignDriverModal(${s.id})">
-          <i class="bi bi-person-plus me-1"></i> Assign Driver
-        </button>
-      </td>
-    </tr>
-  `).join('');
-}
-
-function renderAdminAllShipments() {
-  const tbody = document.getElementById("adminAllShipmentsTableBody");
-  if (!tbody) return;
-
-  tbody.innerHTML = state.shipments.map(s => `
-    <tr>
-      <td><span class="font-monospace fw-bold text-primary">${s.tracking_number}</span></td>
-      <td>${s.customer_name}</td>
-      <td>${s.driver_name ? `<span class="badge bg-light text-dark border">${s.driver_name}</span>` : '<span class="text-danger small fw-semibold">Unassigned</span>'}</td>
-      <td><small class="text-muted">${s.recipient_address}</small></td>
-      <td><span class="status-badge ${getStatusBadgeClass(s.current_status)}">${s.current_status}</span></td>
-      <td class="text-end">
-        <button class="btn btn-sm btn-outline-secondary" onclick="openReceiptModal('${s.tracking_number}')"><i class="bi bi-receipt"></i></button>
-      </td>
-    </tr>
-  `).join('');
-}
-
-function renderAdminDrivers() {
-  const tbody = document.getElementById("adminDriversTableBody");
-  if (!tbody) return;
-
-  tbody.innerHTML = state.drivers.map(d => `
-    <tr>
-      <td>
-        <div class="d-flex align-items-center gap-2">
-          <img src="${d.avatar}" class="rounded-circle" width="32" height="32" alt="${d.name}">
-          <div>
-            <div class="fw-bold">${d.name}</div>
-            <small class="text-muted">${d.callsign}</small>
-          </div>
-        </div>
-      </td>
-      <td>
-        <div>${d.vehicle}</div>
-        <small class="text-muted font-monospace">${d.plate}</small>
-      </td>
-      <td>
-        <span class="badge ${d.status === 'Online' ? 'bg-success' : 'bg-secondary'}">${d.status}</span>
-      </td>
-      <td>${d.active_tasks} active</td>
-      <td><small class="text-muted">${d.proximity}</small></td>
-      <td><span class="text-warning fw-bold"><i class="bi bi-star-fill"></i> ${d.rating}</span></td>
-    </tr>
-  `).join('');
-}
-
-function renderAdminSecurityEvents() {
-  const tbody = document.getElementById("adminSecurityEventsTableBody");
-  if (!tbody) return;
-
-  tbody.innerHTML = state.securityEvents.map(e => `
-    <tr>
-      <td><small class="text-muted">${e.created_at}</small></td>
-      <td><span class="badge bg-danger-subtle text-danger border border-danger-subtle">${e.event_type}</span></td>
-      <td><code class="text-dark">${e.ip}</code></td>
-      <td><small class="text-muted">${e.path}</small></td>
-      <td><small class="text-slate-700">${e.details}</small></td>
-    </tr>
-  `).join('');
-}
-
-let pendingAssignShipmentId = null;
-
-function openAssignDriverModal(shipmentId) {
-  pendingAssignShipmentId = shipmentId;
-  const s = state.shipments.find(item => item.id === shipmentId);
-  if (!s) return;
-
-  document.getElementById("assignTargetTrackingText").textContent = s.tracking_number;
-  document.getElementById("assignTargetCargoText").textContent = `${s.package_description} (${s.weight_kg} kg)`;
-
-  const listContainer = document.getElementById("driverSelectionList");
-  if (listContainer) {
-    listContainer.innerHTML = state.drivers.map((d, idx) => `
-      <label class="list-group-item list-group-item-action d-flex justify-content-between align-items-center cursor-pointer">
-        <div class="d-flex align-items-center gap-3">
-          <input class="form-check-input me-1" type="radio" name="driverRadio" value="${d.id}" ${idx === 0 ? 'checked' : ''}>
-          <img src="${d.avatar}" class="rounded-circle" width="40" height="40" alt="${d.name}">
-          <div>
-            <h6 class="mb-0 fw-bold">${d.name} <span class="badge bg-light text-dark border small">${d.callsign}</span></h6>
-            <small class="text-muted">${d.vehicle} &bull; ${d.proximity}</small>
-          </div>
-        </div>
-        <span class="badge ${d.status === 'Online' ? 'bg-success' : 'bg-secondary'}">${d.status}</span>
-      </label>
-    `).join('');
-  }
-
-  const modalEl = document.getElementById("assignDriverModal");
-  if (modalEl) {
-    const modal = new bootstrap.Modal(modalEl);
-    modal.show();
-  }
-}
-
-function confirmDriverAssignment() {
-  const selectedRadio = document.querySelector('input[name="driverRadio"]:checked');
-  if (!selectedRadio) return;
-
-  const driverId = parseInt(selectedRadio.value);
-  const driver = state.drivers.find(d => d.id === driverId);
-  const shipment = state.shipments.find(s => s.id === pendingAssignShipmentId);
-
-  if (shipment && driver) {
-    shipment.assigned_delivery_id = driver.id;
-    shipment.driver_name = driver.name;
-    shipment.driver_phone = driver.phone;
-    shipment.driver_avatar = driver.avatar;
-
-    const nowStr = new Date().toISOString().replace("T", " ").substring(0, 19);
-    shipment.timeline.push({
-      status: shipment.current_status,
-      location: "Central Dispatch Control Room",
-      notes: `Admin assigned shipment to courier partner ${driver.name} (${driver.callsign}).`,
-      timestamp: nowStr,
-      updater: "Sarah Chen (Fleet Ops Director)",
-      prev_hash: shipment.timeline[shipment.timeline.length - 1].record_hash,
-      record_hash: "dispatch_hash_" + Math.random().toString(36).substring(2, 10)
-    });
-
-    driver.active_tasks++;
-
-    const modalEl = document.getElementById("assignDriverModal");
-    if (modalEl) {
-      const modal = bootstrap.Modal.getInstance(modalEl);
-      modal?.hide();
-    }
-
-    renderAdminPortal();
-    renderDeliveryPortal();
-    renderCustomerPortal();
-  }
-}
-
-function simulateAttackDetection() {
-  const probeEvent = {
-    id: Date.now(),
-    event_type: "UNAUTHORIZED_SHIPMENT_ACCESS",
-    user_id: 99,
-    ip: "198.51.100." + Math.floor(10 + Math.random() * 80),
-    path: "/api/shipments/ST-20261005-481920",
-    details: "Automated scan attempted BOLA probe on foreign customer shipment (Prevented via 404 anti-probing).",
-    created_at: new Date().toISOString().replace("T", " ").substring(0, 19)
-  };
-
-  state.securityEvents.unshift(probeEvent);
-  renderAdminSecurityEvents();
-  alert("Simulated Intrusion Attack sensor triggered! Event logged in /api/admin/security-events.");
-}
-
-// ==============================================================================
-// 5. AI SHIPMENT ASSISTANT (FLOATING WIDGET)
-// ==============================================================================
-function toggleAIAssistant() {
-  const panel = document.getElementById("assistantChatPanel");
-  panel?.classList.toggle("open");
-}
-
-function askAIAssistant(question) {
-  const panel = document.getElementById("assistantChatPanel");
-  panel?.classList.add("open");
-
-  appendChatMessage("user", question);
-
-  // Match question against Q&A knowledge base
-  setTimeout(() => {
-    const qLower = question.toLowerCase();
-    const matched = MOCK_DATA.assistantQA.find(item => 
-      item.triggers.some(trig => qLower.includes(trig))
-    );
-
-    if (matched) {
-      appendChatMessage("bot", matched.answer, matched.packageChip);
-    } else {
-      appendChatMessage("bot", "I am your ShipTrack Logistics AI. I can look up live shipments, verify cryptographic chain of custody, calculate shipping rates, or explain single-use secure tracking tokens!");
-    }
-  }, 450);
-}
-
-function handleChatSubmit(e) {
+async function handleLoginSubmit(e) {
   e.preventDefault();
-  const input = document.getElementById("chatInputText");
-  const text = input ? input.value.trim() : "";
-  if (!text) return;
+  const identifierInput = document.getElementById("loginIdentifier");
+  const passwordInput = document.getElementById("loginPassword");
+  const submitBtn = document.getElementById("btnSubmitLogin");
 
-  input.value = "";
-  askAIAssistant(text);
+  const identifier = identifierInput ? identifierInput.value.trim() : "";
+  const password = passwordInput ? passwordInput.value : "";
+
+  if (!identifier || !password) {
+    showFeedback("loginFeedback", "Please enter both identifier and password.", "danger");
+    return;
+  }
+
+  if (submitBtn) submitBtn.disabled = true;
+  clearFeedback("loginFeedback");
+
+  try {
+    const res = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ identifier, password })
+    });
+
+    const data = await res.json();
+    if (res.ok) {
+      if (passwordInput) passwordInput.value = "";
+      await checkAuthSession();
+    } else {
+      showFeedback("loginFeedback", data.error || "Login failed.", "danger");
+    }
+  } catch (err) {
+    showFeedback("loginFeedback", "Network error communicating with server.", "danger");
+  } finally {
+    if (submitBtn) submitBtn.disabled = false;
+  }
 }
 
-function appendChatMessage(sender, text, chip) {
-  const container = document.getElementById("chatMessagesContainer");
+async function handleRegisterSubmit(e) {
+  e.preventDefault();
+  const usernameInput = document.getElementById("regUsername");
+  const emailInput = document.getElementById("regEmail");
+  const fullNameInput = document.getElementById("regFullName");
+  const phoneInput = document.getElementById("regPhone");
+  const passwordInput = document.getElementById("regPassword");
+  const submitBtn = document.getElementById("btnSubmitRegister");
+
+  const username = usernameInput ? usernameInput.value.trim() : "";
+  const email = emailInput ? emailInput.value.trim() : "";
+  const full_name = fullNameInput ? fullNameInput.value.trim() : "";
+  const phone = phoneInput ? phoneInput.value.trim() : "";
+  const password = passwordInput ? passwordInput.value : "";
+
+  if (submitBtn) submitBtn.disabled = true;
+  clearFeedback("registerFeedback");
+
+  try {
+    const res = await fetch("/api/auth/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, email, full_name, phone, password })
+    });
+
+    const data = await res.json();
+    if (res.status === 201) {
+      showFeedback("registerFeedback", "Registration successful! You may now sign in.", "success");
+      if (passwordInput) passwordInput.value = "";
+      setTimeout(() => switchAuthTab("login"), 1500);
+    } else {
+      showFeedback("registerFeedback", data.error || "Registration failed.", "danger");
+    }
+  } catch (err) {
+    showFeedback("registerFeedback", "Network error communicating with server.", "danger");
+  } finally {
+    if (submitBtn) submitBtn.disabled = false;
+  }
+}
+
+async function handleLogout() {
+  try {
+    await fetch("/api/auth/logout", { method: "POST" });
+  } catch (err) {
+    // proceed to clear UI
+  }
+  appState.currentUser = null;
+  renderUnauthenticatedLayout();
+}
+
+// ==============================================================================
+// CUSTOMER PORTAL
+// ==============================================================================
+async function loadCustomerShipments() {
+  const tbody = document.getElementById("customerShipmentsTableBody");
+  if (!tbody) return;
+
+  clearElement(tbody);
+  const loadingRow = document.createElement("tr");
+  const loadingTd = document.createElement("td");
+  loadingTd.colSpan = 7;
+  loadingTd.className = "text-center py-4 text-muted";
+  loadingTd.textContent = "Loading shipments from server...";
+  loadingRow.appendChild(loadingTd);
+  tbody.appendChild(loadingRow);
+
+  try {
+    const res = await fetch("/api/shipments", { method: "GET" });
+    if (!res.ok) {
+      clearElement(tbody);
+      const errRow = document.createElement("tr");
+      const errTd = document.createElement("td");
+      errTd.colSpan = 7;
+      errTd.className = "text-center py-4 text-danger";
+      errTd.textContent = "Unable to load shipments from server.";
+      errRow.appendChild(errTd);
+      tbody.appendChild(errRow);
+      return;
+    }
+
+    const data = await res.json();
+    const shipments = data.shipments || [];
+    clearElement(tbody);
+
+    if (shipments.length === 0) {
+      const emptyRow = document.createElement("tr");
+      const emptyTd = document.createElement("td");
+      emptyTd.colSpan = 7;
+      emptyTd.className = "text-center py-4 text-muted";
+      emptyTd.textContent = "No shipments created yet. Click 'New Shipment' above to create one.";
+      emptyRow.appendChild(emptyTd);
+      tbody.appendChild(emptyRow);
+      return;
+    }
+
+    shipments.forEach(s => {
+      const tr = document.createElement("tr");
+
+      // Tracking Number
+      const tdTracking = document.createElement("td");
+      const btnTrack = document.createElement("button");
+      btnTrack.type = "button";
+      btnTrack.className = "btn btn-link p-0 font-monospace fw-bold text-decoration-none";
+      btnTrack.textContent = s.tracking_number;
+      btnTrack.addEventListener("click", () => fetchAndShowTrackingDetails(s.tracking_number));
+      tdTracking.appendChild(btnTrack);
+      tr.appendChild(tdTracking);
+
+      // Recipient & Destination
+      const tdRecip = document.createElement("td");
+      const recipName = document.createElement("div");
+      recipName.className = "fw-semibold";
+      recipName.textContent = s.recipient_name;
+      const recipAddr = document.createElement("small");
+      recipAddr.className = "text-muted d-block text-truncate";
+      recipAddr.style.maxWidth = "220px";
+      recipAddr.textContent = s.recipient_address;
+      tdRecip.appendChild(recipName);
+      tdRecip.appendChild(recipAddr);
+      tr.appendChild(tdRecip);
+
+      // Description
+      const tdDesc = document.createElement("td");
+      tdDesc.className = "small text-secondary";
+      tdDesc.textContent = s.package_description;
+      tr.appendChild(tdDesc);
+
+      // Weight
+      const tdWeight = document.createElement("td");
+      tdWeight.className = "small";
+      tdWeight.textContent = `${s.weight_kg} kg`;
+      tr.appendChild(tdWeight);
+
+      // Status
+      const tdStatus = document.createElement("td");
+      tdStatus.appendChild(createStatusBadge(s.current_status));
+      tr.appendChild(tdStatus);
+
+      // Created Date
+      const tdDate = document.createElement("td");
+      tdDate.className = "small text-muted";
+      tdDate.textContent = s.created_at ? s.created_at.split(" ")[0] : "";
+      tr.appendChild(tdDate);
+
+      // Actions
+      const tdActions = document.createElement("td");
+      tdActions.className = "text-end";
+
+      const btnGroup = document.createElement("div");
+      btnGroup.className = "btn-group btn-group-sm";
+
+      const btnInspect = document.createElement("button");
+      btnInspect.type = "button";
+      btnInspect.className = "btn btn-outline-primary";
+      btnInspect.textContent = "Track";
+      btnInspect.addEventListener("click", () => fetchAndShowTrackingDetails(s.tracking_number));
+      btnGroup.appendChild(btnInspect);
+
+      if (s.current_status === "Order Placed") {
+        const btnCancel = document.createElement("button");
+        btnCancel.type = "button";
+        btnCancel.className = "btn btn-outline-danger";
+        btnCancel.textContent = "Cancel";
+        btnCancel.addEventListener("click", () => handleCancelShipment(s.id, s.tracking_number));
+        btnGroup.appendChild(btnCancel);
+      }
+
+      tdActions.appendChild(btnGroup);
+      tr.appendChild(tdActions);
+
+      tbody.appendChild(tr);
+    });
+  } catch (err) {
+    clearElement(tbody);
+    const errRow = document.createElement("tr");
+    const errTd = document.createElement("td");
+    errTd.colSpan = 7;
+    errTd.className = "text-center py-4 text-danger";
+    errTd.textContent = "Failed to load shipments.";
+    errRow.appendChild(errTd);
+    tbody.appendChild(errRow);
+  }
+}
+
+async function handleCreateShipmentSubmit(e) {
+  e.preventDefault();
+  const senderName = document.getElementById("shipSenderName")?.value.trim();
+  const senderAddress = document.getElementById("shipSenderAddress")?.value.trim();
+  const recipientName = document.getElementById("shipRecipientName")?.value.trim();
+  const recipientPhone = document.getElementById("shipRecipientPhone")?.value.trim();
+  const recipientAddress = document.getElementById("shipRecipientAddress")?.value.trim();
+  const packageDesc = document.getElementById("shipPackageDesc")?.value.trim();
+  const weightKg = parseFloat(document.getElementById("shipWeightKg")?.value);
+  const submitBtn = document.getElementById("btnSubmitCreateShipment");
+
+  if (!senderName || !senderAddress || !recipientName || !recipientPhone || !recipientAddress || !packageDesc || isNaN(weightKg)) {
+    showFeedback("createShipmentFeedback", "Please fill in all required fields with valid values.", "danger");
+    return;
+  }
+
+  if (submitBtn) submitBtn.disabled = true;
+  clearFeedback("createShipmentFeedback");
+
+  try {
+    const res = await fetch("/api/shipments", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        sender_name: senderName,
+        sender_address: senderAddress,
+        recipient_name: recipientName,
+        recipient_phone: recipientPhone,
+        recipient_address: recipientAddress,
+        package_description: packageDesc,
+        weight_kg: weightKg
+      })
+    });
+
+    const data = await res.json();
+    if (res.status === 201) {
+      showFeedback("createShipmentFeedback", `Shipment created successfully! Tracking #: ${data.shipment.tracking_number}`, "success");
+      document.getElementById("formCreateShipment")?.reset();
+      await loadCustomerShipments();
+      await fetchAndShowTrackingDetails(data.shipment.tracking_number);
+    } else {
+      showFeedback("createShipmentFeedback", data.error || "Shipment creation failed.", "danger");
+    }
+  } catch (err) {
+    showFeedback("createShipmentFeedback", "Network error creating shipment.", "danger");
+  } finally {
+    if (submitBtn) submitBtn.disabled = false;
+  }
+}
+
+async function fetchAndShowTrackingDetails(trackingNumber) {
+  const detailCard = document.getElementById("customerTrackingDetailCard");
+  if (!detailCard) return;
+
+  clearFeedback("chainVerificationAlertContainer");
+  clearFeedback("generatedTokenAlertContainer");
+
+  try {
+    const res = await fetch(`/api/shipments/${encodeURIComponent(trackingNumber)}`, { method: "GET" });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      showSystemAlert(err.error || "Shipment not found or unauthorized.", "danger");
+      return;
+    }
+
+    const data = await res.json();
+    const s = data.shipment;
+    const timeline = data.timeline || [];
+
+    appState.activeShipmentId = s.id;
+    appState.activeTrackingNumber = s.tracking_number;
+
+    // Populate Metadata via textContent
+    setText("detailTrackingNumBadge", s.tracking_number);
+    const statusBadge = document.getElementById("detailStatusBadge");
+    if (statusBadge) {
+      clearElement(statusBadge);
+      statusBadge.appendChild(createStatusBadge(s.current_status));
+    }
+    setText("detailSenderName", s.sender_name);
+    setText("detailSenderAddress", s.sender_address);
+    setText("detailRecipientName", s.recipient_name);
+    setText("detailRecipientAddress", s.recipient_address);
+    setText("detailRecipientPhone", s.recipient_phone);
+    setText("detailPackageDesc", s.package_description);
+    setText("detailWeightKg", s.weight_kg);
+    setText("detailCreatedAt", s.created_at);
+
+    // Populate Timeline Table via textContent
+    const tbody = document.getElementById("timelineTableBody");
+    if (tbody) {
+      clearElement(tbody);
+      timeline.forEach(item => {
+        const tr = document.createElement("tr");
+
+        const tdStatus = document.createElement("td");
+        tdStatus.appendChild(createStatusBadge(item.status));
+        tr.appendChild(tdStatus);
+
+        const tdLoc = document.createElement("td");
+        tdLoc.textContent = item.location || "";
+        tr.appendChild(tdLoc);
+
+        const tdNotes = document.createElement("td");
+        tdNotes.textContent = item.notes || "";
+        tr.appendChild(tdNotes);
+
+        const tdTime = document.createElement("td");
+        tdTime.textContent = item.timestamp || "";
+        tr.appendChild(tdTime);
+
+        const tdUpdater = document.createElement("td");
+        tdUpdater.textContent = item.updater_username ? `${item.updater_username} (${item.updater_role})` : `User #${item.updated_by_id}`;
+        tr.appendChild(tdUpdater);
+
+        const tdHash = document.createElement("td");
+        tdHash.className = "font-monospace";
+        tdHash.style.fontSize = "0.72rem";
+        tdHash.textContent = item.record_hash ? item.record_hash.substring(0, 16) + "..." : "";
+        tr.appendChild(tdHash);
+
+        tbody.appendChild(tr);
+      });
+    }
+
+    detailCard.classList.remove("d-none");
+    detailCard.scrollIntoView({ behavior: "smooth", block: "start" });
+  } catch (err) {
+    showSystemAlert("Failed to retrieve tracking details.", "danger");
+  }
+}
+
+function closeCustomerTrackingDetail() {
+  document.getElementById("customerTrackingDetailCard")?.classList.add("d-none");
+  appState.activeShipmentId = null;
+  appState.activeTrackingNumber = null;
+}
+
+async function handleCancelShipment(shipmentId, trackingNumber) {
+  if (!confirm(`Are you sure you want to cancel shipment ${trackingNumber}?`)) return;
+
+  try {
+    const res = await fetch(`/api/shipments/${shipmentId}/cancel`, { method: "POST" });
+    const data = await res.json();
+    if (res.ok) {
+      showSystemAlert(`Shipment ${trackingNumber} cancelled successfully.`, "success");
+      await loadCustomerShipments();
+      if (appState.activeShipmentId === shipmentId) {
+        await fetchAndShowTrackingDetails(trackingNumber);
+      }
+    } else {
+      showSystemAlert(data.error || "Failed to cancel shipment.", "danger");
+    }
+  } catch (err) {
+    showSystemAlert("Network error while cancelling shipment.", "danger");
+  }
+}
+
+async function handleVerifyChainClick() {
+  if (!appState.activeShipmentId) return;
+
+  const container = document.getElementById("chainVerificationAlertContainer");
   if (!container) return;
 
-  const bubble = document.createElement("div");
-  bubble.className = `chat-bubble ${sender === "bot" ? "bubble-bot" : "bubble-user"}`;
-  bubble.innerHTML = text.replace(/\n/g, "<br>").replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+  clearFeedback("chainVerificationAlertContainer");
 
-  if (chip) {
-    const chipHtml = `
-      <div class="card border border-primary-subtle bg-primary-subtle p-2 mt-2 text-dark rounded-3">
-        <div class="d-flex justify-content-between align-items-center">
-          <strong class="small">${chip.tracking_number}</strong>
-          <span class="badge bg-primary">${chip.status}</span>
-        </div>
-        <div class="small mt-1 text-muted">Driver: ${chip.driver} &bull; ETA: ${chip.eta}</div>
-        <button class="btn btn-sm btn-primary mt-2 py-0" onclick="setActiveTracking('${chip.tracking_number}')">
-          <i class="bi bi-geo-alt me-1"></i> Track Live
-        </button>
-      </div>
-    `;
-    bubble.innerHTML += chipHtml;
-  }
+  try {
+    const res = await fetch(`/api/shipments/${appState.activeShipmentId}/verify`, { method: "GET" });
+    const data = await res.json();
 
-  container.appendChild(bubble);
-  container.scrollTop = container.scrollHeight;
-}
-
-// ==============================================================================
-// 6. PRINTABLE SHIPPING RECEIPT MODAL
-// ==============================================================================
-function openReceiptModal(trackingNum) {
-  const shipment = state.shipments.find(s => s.tracking_number === trackingNum) || state.shipments[0];
-  if (!shipment) return;
-
-  const bodyEl = document.getElementById("receiptModalBody");
-  if (!bodyEl) return;
-
-  bodyEl.innerHTML = `
-    <div class="p-3">
-      <div class="d-flex justify-content-between border-bottom pb-3 mb-3">
-        <div>
-          <h4 class="fw-bold mb-0 text-primary">ShipTrack Logistics</h4>
-          <small class="text-muted">Waybill & Proof of Dispatch Receipt</small>
-        </div>
-        <div class="text-end">
-          <h6 class="font-monospace fw-bold mb-0">${shipment.tracking_number}</h6>
-          <small class="text-muted">Date: ${shipment.created_at}</small>
-        </div>
-      </div>
-
-      <div class="row g-3 mb-4 small">
-        <div class="col-6">
-          <strong class="text-uppercase text-muted">Sender Details:</strong>
-          <div class="fw-bold fs-6">${shipment.sender_name}</div>
-          <div>${shipment.sender_address}</div>
-        </div>
-        <div class="col-6">
-          <strong class="text-uppercase text-muted">Recipient Details:</strong>
-          <div class="fw-bold fs-6">${shipment.recipient_name}</div>
-          <div>${shipment.recipient_address}</div>
-          <div>Phone: ${shipment.recipient_phone}</div>
-        </div>
-      </div>
-
-      <table class="table table-bordered table-sm mb-4 small">
-        <thead class="table-light">
-          <tr>
-            <th>Item Description</th>
-            <th>Weight</th>
-            <th>Service Tier</th>
-            <th class="text-end">Declared Value</th>
-            <th class="text-end">Shipping Charge</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>${shipment.package_description}</td>
-            <td>${shipment.weight_kg} kg</td>
-            <td>${shipment.tier || 'Standard'}</td>
-            <td class="text-end">$${(shipment.declared_value || 500).toFixed(2)}</td>
-            <td class="text-end fw-bold">$${(shipment.cost || 25.00).toFixed(2)}</td>
-          </tr>
-        </tbody>
-      </table>
-
-      <!-- Barcode Visual Representation -->
-      <div class="text-center py-3 bg-light rounded-3 border mb-3">
-        <div class="font-monospace fw-bold fs-3 text-slate-800" style="letter-spacing: 5px;">||| | |||| | ||| |||| | || |</div>
-        <div class="small font-monospace text-muted">${shipment.tracking_number}</div>
-      </div>
-
-      <div class="d-flex justify-content-between small text-muted border-top pt-3">
-        <div>Status: <strong>${shipment.current_status}</strong></div>
-        <div>Cryptographic Custody: <strong>SHA-256 Verified</strong></div>
-      </div>
-    </div>
-  `;
-
-  const modalEl = document.getElementById("receiptModal");
-  if (modalEl) {
-    const modal = new bootstrap.Modal(modalEl);
-    modal.show();
-  }
-}
-
-// ==============================================================================
-// 7. SIGNATURE CANVAS & GLOBAL SEARCH
-// ==============================================================================
-let sigCanvas, sigCtx, isDrawing = false;
-
-function initSignaturePad() {
-  sigCanvas = document.getElementById("signatureCanvas");
-  if (!sigCanvas) return;
-
-  sigCtx = sigCanvas.getContext("2d");
-  sigCanvas.width = sigCanvas.parentElement.clientWidth || 380;
-  sigCanvas.height = 160;
-  sigCtx.lineWidth = 2.5;
-  sigCtx.lineCap = "round";
-  sigCtx.strokeStyle = "#0f172a";
-
-  const startDraw = (e) => {
-    isDrawing = true;
-    sigCtx.beginPath();
-    const rect = sigCanvas.getBoundingClientRect();
-    const x = (e.clientX || e.touches[0].clientX) - rect.left;
-    const y = (e.clientY || e.touches[0].clientY) - rect.top;
-    sigCtx.moveTo(x, y);
-  };
-
-  const draw = (e) => {
-    if (!isDrawing) return;
-    const rect = sigCanvas.getBoundingClientRect();
-    const x = (e.clientX || e.touches[0].clientX) - rect.left;
-    const y = (e.clientY || e.touches[0].clientY) - rect.top;
-    sigCtx.lineTo(x, y);
-    sigCtx.stroke();
-  };
-
-  const stopDraw = () => { isDrawing = false; };
-
-  sigCanvas.addEventListener("mousedown", startDraw);
-  sigCanvas.addEventListener("mousemove", draw);
-  sigCanvas.addEventListener("mouseup", stopDraw);
-
-  sigCanvas.addEventListener("touchstart", startDraw, { passive: true });
-  sigCanvas.addEventListener("touchmove", draw, { passive: true });
-  sigCanvas.addEventListener("touchend", stopDraw);
-}
-
-function clearSignatureCanvas() {
-  if (sigCanvas && sigCtx) {
-    sigCtx.clearRect(0, 0, sigCanvas.width, sigCanvas.height);
-  }
-}
-
-function initGlobalSearch() {
-  const input = document.getElementById("globalTrackingSearchInput");
-  input?.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") {
-      const q = input.value.trim().toUpperCase();
-      if (!q) return;
-
-      const found = state.shipments.find(s => 
-        s.tracking_number.toUpperCase().includes(q) || 
-        s.recipient_name.toUpperCase().includes(q)
-      );
-
-      if (found) {
-        setActiveTracking(found.tracking_number);
-        input.value = "";
-      } else {
-        alert(`No shipment found matching "${q}". Try ST-20261005-481920`);
-      }
+    const alertDiv = document.createElement("div");
+    if (res.ok && data.valid === true) {
+      alertDiv.className = "alert alert-success border-success p-3 small mb-0";
+      alertDiv.textContent = `Cryptographic Chain Verified: Intact. Verified across ${data.record_count} status record(s). Zero tampering detected.`;
+    } else {
+      alertDiv.className = "alert alert-danger border-danger p-3 small mb-0";
+      alertDiv.textContent = `Tamper Alert: Cryptographic chain compromised at record #${data.broken_at_record_id || 'unknown'}!`;
     }
-  });
+    container.appendChild(alertDiv);
+  } catch (err) {
+    showFeedback("chainVerificationAlertContainer", "Error verifying chain integrity.", "danger");
+  }
 }
 
-function resetMockState() {
-  localStorage.clear();
-  state.shipments = JSON.parse(JSON.stringify(MOCK_DATA.shipments));
-  state.drivers = JSON.parse(JSON.stringify(MOCK_DATA.drivers));
-  state.securityEvents = JSON.parse(JSON.stringify(MOCK_DATA.securityEvents));
-  state.activeTrackingId = "ST-20261005-481920";
-  renderAllViews();
-  alert("Demo state reset to original pre-populated baseline.");
+async function handleGenerateTokenClick() {
+  if (!appState.activeShipmentId) return;
+
+  const container = document.getElementById("generatedTokenAlertContainer");
+  if (!container) return;
+
+  clearFeedback("generatedTokenAlertContainer");
+
+  try {
+    const res = await fetch(`/api/shipments/${appState.activeShipmentId}/generate-tracking-link`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ttl_minutes: 15 })
+    });
+
+    const data = await res.json();
+    if (res.status === 201) {
+      const alertDiv = document.createElement("div");
+      alertDiv.className = "alert alert-info border-info p-3 small mb-0";
+
+      const title = document.createElement("strong");
+      title.className = "d-block mb-1";
+      title.textContent = "Ephemeral 1-Time Secure Tracking Link Generated";
+      alertDiv.appendChild(title);
+
+      const desc = document.createElement("div");
+      desc.textContent = "This token is single-use and will burn permanently upon first view. Share the token with recipient:";
+      alertDiv.appendChild(desc);
+
+      const tokenBox = document.createElement("div");
+      tokenBox.className = "font-monospace bg-white p-2 rounded border my-2 text-break fw-bold text-dark";
+      tokenBox.textContent = data.token;
+      alertDiv.appendChild(tokenBox);
+
+      const exp = document.createElement("small");
+      exp.className = "text-muted d-block";
+      exp.textContent = `Expires at (UTC): ${data.expires_at}`;
+      alertDiv.appendChild(exp);
+
+      container.appendChild(alertDiv);
+    } else {
+      showFeedback("generatedTokenAlertContainer", data.error || "Failed to generate link.", "danger");
+    }
+  } catch (err) {
+    showFeedback("generatedTokenAlertContainer", "Error generating link.", "danger");
+  }
 }
 
-// Helper badge utilities
-function getStatusBadgeClass(status) {
-  const map = {
-    "Order Placed": "badge-order-placed",
-    "Picked Up": "badge-picked-up",
-    "In Transit": "badge-in-transit",
-    "Out for Delivery": "badge-out-for-delivery",
-    "Delivered": "badge-delivered",
-    "Cancelled": "badge-cancelled"
-  };
-  return map[status] || "badge-order-placed";
+// ==============================================================================
+// PUBLIC 1-TIME EPHEMERAL TOKEN VIEWER
+// ==============================================================================
+async function handlePublicTokenAccess() {
+  const tokenInput = document.getElementById("publicTokenInput");
+  const token = tokenInput ? tokenInput.value.trim() : "";
+  if (!token) return;
+
+  const resultBody = document.getElementById("publicTokenResultBody");
+  if (!resultBody) return;
+
+  clearElement(resultBody);
+  const loading = document.createElement("p");
+  loading.className = "text-muted small";
+  loading.textContent = "Accessing single-use tracking link...";
+  resultBody.appendChild(loading);
+
+  const modalEl = document.getElementById("modalPublicTokenResult");
+  const modal = modalEl ? new bootstrap.Modal(modalEl) : null;
+  modal?.show();
+
+  try {
+    const res = await fetch(`/api/tracking/live/${encodeURIComponent(token)}`, { method: "GET" });
+    const data = await res.json();
+
+    clearElement(resultBody);
+
+    if (res.status === 200) {
+      const successCard = document.createElement("div");
+      successCard.className = "alert alert-success border-success small mb-3";
+
+      const heading = document.createElement("strong");
+      heading.className = "d-block mb-1";
+      heading.textContent = "Single-Use Tracking Authorized";
+      successCard.appendChild(heading);
+
+      const notice = document.createElement("div");
+      notice.textContent = data.notice || "This link has been accessed and permanently burned.";
+      successCard.appendChild(notice);
+      resultBody.appendChild(successCard);
+
+      if (data.shipment) {
+        const shipInfo = document.createElement("div");
+        shipInfo.className = "card bg-light border-0 p-3 mb-3 small";
+
+        const line1 = document.createElement("div");
+        line1.textContent = `Tracking #: ${data.shipment.tracking_number}`;
+        shipInfo.appendChild(line1);
+
+        const line2 = document.createElement("div");
+        line2.textContent = `Current Status: ${data.shipment.current_status}`;
+        shipInfo.appendChild(line2);
+
+        const line3 = document.createElement("div");
+        line3.textContent = `Cargo: ${data.shipment.package_description}`;
+        shipInfo.appendChild(line3);
+
+        const line4 = document.createElement("div");
+        line4.textContent = `Destination: ${data.shipment.destination}`;
+        shipInfo.appendChild(line4);
+
+        resultBody.appendChild(shipInfo);
+      }
+
+      if (data.live_gps) {
+        const gpsInfo = document.createElement("div");
+        gpsInfo.className = "card border p-3 small mb-2";
+
+        const gpsTitle = document.createElement("strong");
+        gpsTitle.textContent = "Live GPS Coordinates:";
+        gpsInfo.appendChild(gpsTitle);
+
+        const coords = document.createElement("div");
+        coords.className = "font-monospace mt-1";
+        coords.textContent = `Lat: ${data.live_gps.latitude}, Long: ${data.live_gps.longitude} (Speed: ${data.live_gps.speed_kmh} km/h)`;
+        gpsInfo.appendChild(coords);
+
+        resultBody.appendChild(gpsInfo);
+      }
+    } else if (res.status === 410) {
+      const errCard = document.createElement("div");
+      errCard.className = "alert alert-danger border-danger small";
+
+      const errTitle = document.createElement("strong");
+      errTitle.className = "d-block mb-1";
+      errTitle.textContent = "HTTP 410 Gone: Link Inactivated";
+      errCard.appendChild(errTitle);
+
+      const errMsg = document.createElement("div");
+      errMsg.textContent = data.error || "This single-use link has expired or has already been consumed.";
+      errCard.appendChild(errMsg);
+
+      resultBody.appendChild(errCard);
+    } else {
+      const errCard = document.createElement("div");
+      errCard.className = "alert alert-warning border-warning small";
+      errCard.textContent = data.error || "Invalid tracking token.";
+      resultBody.appendChild(errCard);
+    }
+  } catch (err) {
+    clearElement(resultBody);
+    const errCard = document.createElement("div");
+    errCard.className = "alert alert-danger small";
+    errCard.textContent = "Network error accessing tracking link.";
+    resultBody.appendChild(errCard);
+  }
 }
 
-function getStatusIcon(status) {
-  const map = {
-    "Order Placed": "bi-check2-circle",
-    "Picked Up": "bi-box-arrow-up",
-    "In Transit": "bi-truck",
-    "Out for Delivery": "bi-geo-alt",
-    "Delivered": "bi-house-check",
-    "Cancelled": "bi-x-circle"
-  };
-  return map[status] || "bi-dot";
+// ==============================================================================
+// DELIVERY COURIER PORTAL
+// ==============================================================================
+async function loadDeliveryDashboard() {
+  const tbody = document.getElementById("deliveryTasksTableBody");
+  if (!tbody) return;
+
+  clearElement(tbody);
+
+  try {
+    const res = await fetch("/api/delivery/dashboard", { method: "GET" });
+    if (!res.ok) return;
+
+    const data = await res.json();
+    const metrics = data.metrics || {};
+    const tasks = data.active_shipments || data.assigned_shipments || [];
+
+    // Populate Metrics via textContent
+    setText("delivMetricTotal", metrics.total_assigned || 0);
+    setText("delivMetricTransit", (metrics.picked_up || 0) + (metrics.in_transit || 0));
+    setText("delivMetricOut", metrics.out_for_delivery || 0);
+    setText("delivMetricDelivered", metrics.delivered || 0);
+
+    if (tasks.length === 0) {
+      const emptyRow = document.createElement("tr");
+      const emptyTd = document.createElement("td");
+      emptyTd.colSpan = 7;
+      emptyTd.className = "text-center py-4 text-muted";
+      emptyTd.textContent = "No shipments currently assigned to you.";
+      emptyRow.appendChild(emptyTd);
+      tbody.appendChild(emptyRow);
+      return;
+    }
+
+    tasks.forEach(t => {
+      const tr = document.createElement("tr");
+
+      const tdTracking = document.createElement("td");
+      tdTracking.className = "font-monospace fw-bold text-primary";
+      tdTracking.textContent = t.tracking_number;
+      tr.appendChild(tdTracking);
+
+      const tdPickup = document.createElement("td");
+      tdPickup.className = "small text-muted";
+      tdPickup.textContent = t.sender_address;
+      tr.appendChild(tdPickup);
+
+      const tdDeliv = document.createElement("td");
+      tdDeliv.className = "small text-muted";
+      tdDeliv.textContent = t.recipient_address;
+      tr.appendChild(tdDeliv);
+
+      const tdPhone = document.createElement("td");
+      tdPhone.className = "small";
+      tdPhone.textContent = t.recipient_phone;
+      tr.appendChild(tdPhone);
+
+      const tdCargo = document.createElement("td");
+      tdCargo.className = "small";
+      tdCargo.textContent = `${t.package_description} (${t.weight_kg} kg)`;
+      tr.appendChild(tdCargo);
+
+      const tdStatus = document.createElement("td");
+      tdStatus.appendChild(createStatusBadge(t.current_status));
+      tr.appendChild(tdStatus);
+
+      const tdAction = document.createElement("td");
+      tdAction.className = "text-end";
+
+      if (t.current_status === "Delivered" || t.current_status === "Cancelled") {
+        const badge = document.createElement("span");
+        badge.className = "badge bg-light text-dark border";
+        badge.textContent = "Completed";
+        tdAction.appendChild(badge);
+      } else {
+        const btnUpdate = document.createElement("button");
+        btnUpdate.type = "button";
+        btnUpdate.className = "btn btn-sm btn-primary";
+        btnUpdate.textContent = "Advance Milestone";
+        btnUpdate.addEventListener("click", () => openCourierStatusModal(t));
+        tdAction.appendChild(btnUpdate);
+      }
+
+      tr.appendChild(tdAction);
+      tbody.appendChild(tr);
+    });
+  } catch (err) {
+    // handled gracefully
+  }
+}
+
+function openCourierStatusModal(shipment) {
+  const modalEl = document.getElementById("modalCourierStatus");
+  if (!modalEl) return;
+
+  const idInput = document.getElementById("statusShipmentId");
+  if (idInput) idInput.value = shipment.id;
+
+  const titleEl = document.getElementById("modalCourierStatusTitle");
+  if (titleEl) titleEl.textContent = `Update Status for ${shipment.tracking_number}`;
+
+  const selectStatus = document.getElementById("selectNextStatus");
+  if (selectStatus) {
+    clearElement(selectStatus);
+
+    const nextStatuses = [];
+    if (shipment.current_status === "Order Placed") nextStatuses.push("Picked Up");
+    else if (shipment.current_status === "Picked Up") nextStatuses.push("In Transit");
+    else if (shipment.current_status === "In Transit") nextStatuses.push("Out for Delivery");
+    else if (shipment.current_status === "Out for Delivery") nextStatuses.push("Delivered");
+
+    nextStatuses.forEach(st => {
+      const opt = document.createElement("option");
+      opt.value = st;
+      opt.textContent = st;
+      selectStatus.appendChild(opt);
+    });
+  }
+
+  const locInput = document.getElementById("inputStatusLocation");
+  if (locInput) locInput.value = "";
+
+  const notesInput = document.getElementById("inputStatusNotes");
+  if (notesInput) notesInput.value = "";
+
+  clearFeedback("statusModalFeedback");
+
+  const modal = new bootstrap.Modal(modalEl);
+  modal.show();
+}
+
+async function handleCourierStatusSubmit(e) {
+  e.preventDefault();
+  const shipmentId = document.getElementById("statusShipmentId")?.value;
+  const status = document.getElementById("selectNextStatus")?.value;
+  const location = document.getElementById("inputStatusLocation")?.value.trim();
+  const notes = document.getElementById("inputStatusNotes")?.value.trim();
+
+  if (!shipmentId || !status || !location) {
+    showFeedback("statusModalFeedback", "Status and location are required.", "danger");
+    return;
+  }
+
+  try {
+    const res = await fetch(`/api/delivery/shipments/${shipmentId}/status`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status, location, notes })
+    });
+
+    const data = await res.json();
+    if (res.ok) {
+      const modalEl = document.getElementById("modalCourierStatus");
+      const modal = modalEl ? bootstrap.Modal.getInstance(modalEl) : null;
+      modal?.hide();
+
+      showSystemAlert(`Milestone advanced to '${status}'.`, "success");
+      await loadDeliveryDashboard();
+    } else {
+      showFeedback("statusModalFeedback", data.error || "Status update failed.", "danger");
+    }
+  } catch (err) {
+    showFeedback("statusModalFeedback", "Error updating status.", "danger");
+  }
+}
+
+// ==============================================================================
+// ADMIN MANAGEMENT PORTAL
+// ==============================================================================
+async function loadAdminDashboard() {
+  try {
+    const res = await fetch("/api/admin/dashboard", { method: "GET" });
+    if (!res.ok) return;
+
+    const data = await res.json();
+    const m = data.metrics || {};
+    const statusCounts = m.status_counts || {};
+
+    setText("adminMetricShipments", m.total_shipments || 0);
+    setText("adminMetricUsers", m.total_users || 0);
+    setText("adminMetricInDelivery", (statusCounts["In Transit"] || 0) + (statusCounts["Out for Delivery"] || 0));
+    setText("adminMetricAlerts", m.recent_security_events_count || 0);
+
+    // Load active tab data
+    loadAdminShipments();
+    loadAdminDispatch();
+    loadAdminUsers();
+    loadAdminSecurityEvents();
+  } catch (err) {
+    // handled gracefully
+  }
+}
+
+function switchAdminTab(tabName) {
+  const tabs = ["tabAdminShipmentsBtn", "tabAdminDispatchBtn", "tabAdminUsersBtn", "tabAdminSecurityBtn"];
+  const panels = ["adminShipmentsPanel", "adminDispatchPanel", "adminUsersPanel", "adminSecurityPanel"];
+
+  tabs.forEach(t => document.getElementById(t)?.classList.remove("active"));
+  panels.forEach(p => document.getElementById(p)?.classList.add("d-none"));
+
+  if (tabName === "shipments") {
+    document.getElementById("tabAdminShipmentsBtn")?.classList.add("active");
+    document.getElementById("adminShipmentsPanel")?.classList.remove("d-none");
+    loadAdminShipments();
+  } else if (tabName === "dispatch") {
+    document.getElementById("tabAdminDispatchBtn")?.classList.add("active");
+    document.getElementById("adminDispatchPanel")?.classList.remove("d-none");
+    loadAdminDispatch();
+  } else if (tabName === "users") {
+    document.getElementById("tabAdminUsersBtn")?.classList.add("active");
+    document.getElementById("adminUsersPanel")?.classList.remove("d-none");
+    loadAdminUsers();
+  } else if (tabName === "security") {
+    document.getElementById("tabAdminSecurityBtn")?.classList.add("active");
+    document.getElementById("adminSecurityPanel")?.classList.remove("d-none");
+    loadAdminSecurityEvents();
+  }
+}
+
+async function loadAdminShipments() {
+  const tbody = document.getElementById("adminShipmentsTableBody");
+  if (!tbody) return;
+
+  clearElement(tbody);
+
+  try {
+    const res = await fetch("/api/admin/shipments?page=1&per_page=50", { method: "GET" });
+    if (!res.ok) return;
+
+    const data = await res.json();
+    const shipments = data.shipments || [];
+
+    if (shipments.length === 0) {
+      const tr = document.createElement("tr");
+      const td = document.createElement("td");
+      td.colSpan = 6;
+      td.className = "text-center py-3 text-muted";
+      td.textContent = "No shipments registered.";
+      tr.appendChild(td);
+      tbody.appendChild(tr);
+      return;
+    }
+
+    shipments.forEach(s => {
+      const tr = document.createElement("tr");
+
+      const tdTracking = document.createElement("td");
+      tdTracking.className = "font-monospace fw-bold text-primary";
+      tdTracking.textContent = s.tracking_number;
+      tr.appendChild(tdTracking);
+
+      const tdCustomer = document.createElement("td");
+      tdCustomer.textContent = s.customer_username || `Customer #${s.customer_id}`;
+      tr.appendChild(tdCustomer);
+
+      const tdCourier = document.createElement("td");
+      if (s.courier_name || s.courier_username) {
+        tdCourier.textContent = s.courier_name || s.courier_username;
+      } else {
+        const unassigned = document.createElement("span");
+        unassigned.className = "badge bg-danger-subtle text-danger border border-danger-subtle";
+        unassigned.textContent = "Unassigned";
+        tdCourier.appendChild(unassigned);
+      }
+      tr.appendChild(tdCourier);
+
+      const tdDest = document.createElement("td");
+      tdDest.className = "small text-muted text-truncate";
+      tdDest.style.maxWidth = "200px";
+      tdDest.textContent = s.recipient_address;
+      tr.appendChild(tdDest);
+
+      const tdStatus = document.createElement("td");
+      tdStatus.appendChild(createStatusBadge(s.current_status));
+      tr.appendChild(tdStatus);
+
+      const tdDate = document.createElement("td");
+      tdDate.className = "small text-muted";
+      tdDate.textContent = s.created_at ? s.created_at.split(" ")[0] : "";
+      tr.appendChild(tdDate);
+
+      tbody.appendChild(tr);
+    });
+  } catch (err) {}
+}
+
+async function loadAdminDispatch() {
+  const tbody = document.getElementById("adminDispatchTableBody");
+  if (!tbody) return;
+
+  clearElement(tbody);
+
+  try {
+    const res = await fetch("/api/admin/shipments?page=1&per_page=100", { method: "GET" });
+    if (!res.ok) return;
+
+    const data = await res.json();
+    const shipments = (data.shipments || []).filter(s => !s.assigned_delivery_id && s.current_status !== "Cancelled");
+
+    if (shipments.length === 0) {
+      const tr = document.createElement("tr");
+      const td = document.createElement("td");
+      td.colSpan = 6;
+      td.className = "text-center py-3 text-success";
+      td.textContent = "No unassigned shipments pending dispatch.";
+      tr.appendChild(td);
+      tbody.appendChild(tr);
+      return;
+    }
+
+    shipments.forEach(s => {
+      const tr = document.createElement("tr");
+
+      const tdTracking = document.createElement("td");
+      tdTracking.className = "font-monospace fw-bold";
+      tdTracking.textContent = s.tracking_number;
+      tr.appendChild(tdTracking);
+
+      const tdCustomer = document.createElement("td");
+      tdCustomer.textContent = s.customer_username || s.sender_name;
+      tr.appendChild(tdCustomer);
+
+      const tdPickup = document.createElement("td");
+      tdPickup.className = "small text-muted";
+      tdPickup.textContent = s.sender_address;
+      tr.appendChild(tdPickup);
+
+      const tdDest = document.createElement("td");
+      tdDest.className = "small text-muted";
+      tdDest.textContent = s.recipient_address;
+      tr.appendChild(tdDest);
+
+      const tdCargo = document.createElement("td");
+      tdCargo.className = "small";
+      tdCargo.textContent = `${s.package_description} (${s.weight_kg} kg)`;
+      tr.appendChild(tdCargo);
+
+      const tdAction = document.createElement("td");
+      tdAction.className = "text-end";
+      const btnAssign = document.createElement("button");
+      btnAssign.type = "button";
+      btnAssign.className = "btn btn-sm btn-primary";
+      btnAssign.textContent = "Assign Courier";
+      btnAssign.addEventListener("click", () => openAdminAssignModal(s));
+      tdAction.appendChild(btnAssign);
+      tr.appendChild(tdAction);
+
+      tbody.appendChild(tr);
+    });
+  } catch (err) {}
+}
+
+async function openAdminAssignModal(shipment) {
+  const modalEl = document.getElementById("modalAdminAssign");
+  if (!modalEl) return;
+
+  const idInput = document.getElementById("assignShipmentId");
+  if (idInput) idInput.value = shipment.id;
+
+  setText("assignShipmentTrackingLabel", `${shipment.tracking_number} (${shipment.package_description})`);
+
+  const selectCourier = document.getElementById("selectAssignCourier");
+  if (selectCourier) {
+    clearElement(selectCourier);
+
+    try {
+      const res = await fetch("/api/admin/delivery-persons", { method: "GET" });
+      const data = await res.json();
+      const couriers = data.delivery_persons || [];
+
+      if (couriers.length === 0) {
+        const opt = document.createElement("option");
+        opt.value = "";
+        opt.textContent = "No registered delivery couriers available";
+        selectCourier.appendChild(opt);
+      } else {
+        couriers.forEach(c => {
+          const opt = document.createElement("option");
+          opt.value = c.id;
+          opt.textContent = `${c.full_name} (@${c.username}) — ${c.email}`;
+          selectCourier.appendChild(opt);
+        });
+      }
+    } catch (err) {
+      const opt = document.createElement("option");
+      opt.value = "";
+      opt.textContent = "Error loading courier list";
+      selectCourier.appendChild(opt);
+    }
+  }
+
+  const notesInput = document.getElementById("inputAssignNotes");
+  if (notesInput) notesInput.value = "";
+
+  clearFeedback("assignModalFeedback");
+
+  const modal = new bootstrap.Modal(modalEl);
+  modal.show();
+}
+
+async function handleAdminAssignSubmit(e) {
+  e.preventDefault();
+  const shipmentId = document.getElementById("assignShipmentId")?.value;
+  const courierId = document.getElementById("selectAssignCourier")?.value;
+  const notes = document.getElementById("inputAssignNotes")?.value.trim();
+
+  if (!shipmentId || !courierId) {
+    showFeedback("assignModalFeedback", "Please select a valid courier.", "danger");
+    return;
+  }
+
+  try {
+    const res = await fetch(`/api/admin/shipments/${shipmentId}/assign`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        delivery_person_id: parseInt(courierId),
+        notes: notes || "Assigned via admin dispatch console."
+      })
+    });
+
+    const data = await res.json();
+    if (res.ok) {
+      const modalEl = document.getElementById("modalAdminAssign");
+      const modal = modalEl ? bootstrap.Modal.getInstance(modalEl) : null;
+      modal?.hide();
+
+      showSystemAlert("Shipment assigned successfully.", "success");
+      await loadAdminDashboard();
+    } else {
+      showFeedback("assignModalFeedback", data.error || "Assignment failed.", "danger");
+    }
+  } catch (err) {
+    showFeedback("assignModalFeedback", "Error submitting assignment.", "danger");
+  }
+}
+
+async function loadAdminUsers() {
+  const tbody = document.getElementById("adminUsersTableBody");
+  if (!tbody) return;
+
+  clearElement(tbody);
+
+  try {
+    const res = await fetch("/api/admin/users?page=1&per_page=50", { method: "GET" });
+    if (!res.ok) return;
+
+    const data = await res.json();
+    const users = data.users || [];
+
+    users.forEach(u => {
+      const tr = document.createElement("tr");
+
+      const tdId = document.createElement("td");
+      tdId.textContent = u.id;
+      tr.appendChild(tdId);
+
+      const tdUser = document.createElement("td");
+      tdUser.className = "fw-semibold";
+      tdUser.textContent = u.username;
+      tr.appendChild(tdUser);
+
+      const tdEmail = document.createElement("td");
+      tdEmail.textContent = u.email;
+      tr.appendChild(tdEmail);
+
+      const tdRole = document.createElement("td");
+      const roleBadge = document.createElement("span");
+      roleBadge.className = "badge";
+      if (u.role === "admin") roleBadge.className += " bg-danger";
+      else if (u.role === "delivery_person") roleBadge.className += " bg-info text-dark";
+      else roleBadge.className += " bg-primary";
+      roleBadge.textContent = u.role;
+      tdRole.appendChild(roleBadge);
+      tr.appendChild(tdRole);
+
+      const tdName = document.createElement("td");
+      tdName.textContent = u.full_name || "";
+      tr.appendChild(tdName);
+
+      const tdPhone = document.createElement("td");
+      tdPhone.textContent = u.phone || "—";
+      tr.appendChild(tdPhone);
+
+      const tdCreated = document.createElement("td");
+      tdCreated.className = "small text-muted";
+      tdCreated.textContent = u.created_at ? u.created_at.split(" ")[0] : "";
+      tr.appendChild(tdCreated);
+
+      tbody.appendChild(tr);
+    });
+  } catch (err) {}
+}
+
+async function loadAdminSecurityEvents() {
+  const tbody = document.getElementById("adminSecurityTableBody");
+  if (!tbody) return;
+
+  clearElement(tbody);
+
+  try {
+    const res = await fetch("/api/admin/security-events?page=1&per_page=50", { method: "GET" });
+    if (!res.ok) return;
+
+    const data = await res.json();
+    const events = data.events || [];
+
+    if (events.length === 0) {
+      const tr = document.createElement("tr");
+      const td = document.createElement("td");
+      td.colSpan = 5;
+      td.className = "text-center py-3 text-muted";
+      td.textContent = "No security events recorded.";
+      tr.appendChild(td);
+      tbody.appendChild(tr);
+      return;
+    }
+
+    events.forEach(ev => {
+      const tr = document.createElement("tr");
+
+      const tdTime = document.createElement("td");
+      tdTime.className = "small text-muted";
+      tdTime.textContent = ev.created_at || "";
+      tr.appendChild(tdTime);
+
+      const tdType = document.createElement("td");
+      const badge = document.createElement("span");
+      badge.className = "badge bg-danger-subtle text-danger border border-danger-subtle";
+      badge.textContent = ev.event_type;
+      tdType.appendChild(badge);
+      tr.appendChild(tdType);
+
+      const tdIp = document.createElement("td");
+      const code = document.createElement("code");
+      code.textContent = ev.ip || "";
+      tdIp.appendChild(code);
+      tr.appendChild(tdIp);
+
+      const tdPath = document.createElement("td");
+      tdPath.className = "small text-muted";
+      tdPath.textContent = ev.path || "";
+      tr.appendChild(tdPath);
+
+      const tdDetails = document.createElement("td");
+      tdDetails.className = "small text-dark";
+      tdDetails.textContent = ev.details || "";
+      tr.appendChild(tdDetails);
+
+      tbody.appendChild(tr);
+    });
+  } catch (err) {}
+}
+
+// ==============================================================================
+// GLOBAL TRACKING LOOKUP (SEARCH BAR)
+// ==============================================================================
+async function handleGlobalSearch() {
+  const input = document.getElementById("globalTrackingInput");
+  const trackingNumber = input ? input.value.trim() : "";
+  if (!trackingNumber) return;
+
+  if (appState.currentUser && appState.currentUser.role === "customer") {
+    await fetchAndShowTrackingDetails(trackingNumber);
+    input.value = "";
+  } else {
+    // If not logged in as customer, inform user or load if authorized
+    try {
+      const res = await fetch(`/api/shipments/${encodeURIComponent(trackingNumber)}`);
+      if (res.ok) {
+        showSystemAlert(`Shipment ${trackingNumber} verified on server. Sign in to view full custody log.`, "info");
+      } else {
+        showSystemAlert(`Tracking number not found or requires authorized login.`, "warning");
+      }
+    } catch (e) {
+      showSystemAlert("Error querying tracking number.", "danger");
+    }
+  }
+}
+
+// ==============================================================================
+// DOM & SANITIZATION UTILITIES (STRICT textContent ONLY)
+// ==============================================================================
+function setText(elementId, text) {
+  const el = document.getElementById(elementId);
+  if (el) el.textContent = text !== null && text !== undefined ? String(text) : "";
+}
+
+function clearElement(element) {
+  while (element.firstChild) {
+    element.removeChild(element.firstChild);
+  }
+}
+
+function clearFeedback(containerId) {
+  const container = document.getElementById(containerId);
+  if (container) clearElement(container);
+}
+
+function showFeedback(containerId, message, type) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  clearElement(container);
+  const div = document.createElement("div");
+  div.className = `alert alert-${type} p-2 small mb-0`;
+  div.textContent = message;
+  container.appendChild(div);
+}
+
+function showSystemAlert(message, type) {
+  const container = document.getElementById("systemAlertContainer");
+  if (!container) return;
+
+  clearElement(container);
+  const alertDiv = document.createElement("div");
+  alertDiv.className = `alert alert-${type} alert-dismissible fade show p-3 small mb-0`;
+  alertDiv.textContent = message;
+
+  const closeBtn = document.createElement("button");
+  closeBtn.type = "button";
+  closeBtn.className = "btn-close";
+  closeBtn.setAttribute("data-bs-dismiss", "alert");
+  closeBtn.setAttribute("aria-label", "Close");
+
+  alertDiv.appendChild(closeBtn);
+  container.appendChild(alertDiv);
+
+  setTimeout(() => {
+    if (container.contains(alertDiv)) {
+      alertDiv.classList.remove("show");
+      setTimeout(() => clearElement(container), 200);
+    }
+  }, 5000);
+}
+
+function createStatusBadge(status) {
+  const badge = document.createElement("span");
+  badge.className = "badge";
+
+  if (status === "Order Placed") badge.className += " bg-warning text-dark";
+  else if (status === "Picked Up") badge.className += " bg-info text-dark";
+  else if (status === "In Transit") badge.className += " bg-primary";
+  else if (status === "Out for Delivery") badge.className += " bg-purple text-white";
+  else if (status === "Delivered") badge.className += " bg-success";
+  else if (status === "Cancelled") badge.className += " bg-danger";
+  else badge.className += " bg-secondary";
+
+  badge.textContent = status || "Unknown";
+  return badge;
 }

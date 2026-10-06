@@ -173,6 +173,15 @@ ShipTrack adopts a clean two-tier decoupled architecture:
 - **Decision & Rationale:** Selected hand-written plain HTML/CSS/JS with Bootstrap 5 via CDN. Provides zero-latency rendering, clean maintainability, immediate testability across any static or Flask environment, rich interactive features (HTML5 signature pad, multi-step creation wizard, visual stepper, AI floating assistant, print-ready receipts), and full alignment with competition constraints.
 - **Security & Performance Trade-offs:** Zero build tool vulnerabilities (CVEs), instant browser loading, and complete sanitization of client-side DOM insertions.
 
+### ADR-009: Production API Wiring, XSS Neutralization via textContent, and Zero Fake Data
+- **Status:** Accepted
+- **Context:** Transitioning the user interface to an authentic production state by purging all mock data (`mockData.js`), removing client-side role toggle tabs, routing authentication directly via `GET /api/auth/me`, and neutralizing DOM Cross-Site Scripting (XSS).
+- **Options Considered:**
+  1. Retain mock fallback state with client-side role tabs
+  2. Complete deletion of mock data, strict session cookie auth, dynamic single-role view rendering driven by `/api/auth/me`, and exclusive DOM `textContent` insertion
+- **Decision & Rationale:** Fully deleted `mockData.js` and removed client-side role toggle tabs. The UI now loads `GET /api/auth/me` on startup; if 401, it directs to login/register. If 200, only the specific dashboard matching the verified role (`customer`, `delivery_person`, or `admin`) is revealed. All server and user data (names, tracking numbers, addresses, descriptions, statuses, hashes, and forensic event logs) are rendered strictly using DOM `.textContent`, eliminating client-side XSS injection vectors. Added `gunicorn` and automatic SQLite table initialization and environment variable seeding on startup.
+- **Security & Performance Trade-offs:** Absolute prevention of DOM XSS, zero exposure of credentials or mock tokens, and complete deployment readiness.
+
 ---
 
 ## 5. Engineering Journal & Real-Time Decision Log
@@ -208,28 +217,28 @@ ShipTrack adopts a clean two-tier decoupled architecture:
 - **Resolution:** Raw tokens are never persisted to the database; incoming tokens are checked via SHA-256 digests and immediately burned (`is_used = 1`). Replays return HTTP 410 Gone and log `REPLAY_ATTACK_DETECTED`. Created 9 comprehensive automated tests in `tests/test_gps_and_ephemeral_token.py`, achieving 16/16 test passes across the entire test suite.
 
 ### 2026-10-05 19:00 IST — Entry 7: Multi-Role Enterprise Frontend Implementation & Integration
-- **Focus:** Built the complete responsive frontend (`src/frontend/`) by hand using HTML5, CSS3, JavaScript (ES6+), and Bootstrap 5 via CDN. Implemented:
-  1. Top Navbar with interactive Role Switcher (Customer, Delivery Partner, Admin), quick global tracking search (`Ctrl+K`), system notifications bell, and user avatar profile dropdown.
-  2. Customer Portal: Metrics cards, 4-step shipment creation wizard (Addresses, Package specs, Service tier with dynamic price calculation, Review & instant tracking card generation), interactive visual status stepper, driver details card with portrait, live GPS map simulation with coordinate readout, cryptographic chain of custody audit box (`/api/shipments/<id>/verify`), and filterable history table with receipt download and cancellation.
-  3. Delivery-Person Portal: Today's deliveries metrics, online/offline availability switch, route-priority sorted task cards, milestone progression buttons, live GPS telemetry ping simulation, and delivery confirmation modal with recipient 6-digit OTP verification and HTML5 canvas signature pad.
-  4. Admin Management Portal: Platform KPIs, unassigned shipments dispatch board with driver assignment modal, all shipments browser, active drivers roster, and security events intrusion telemetry table.
-  5. Floating AI Shipment Assistant Widget: Expandable chat popover with preset pills, intelligent query matching, and live package status chips inside the chat.
-  6. Printable Shipping Receipt Modal: Formatted waybill with barcode simulation and print-to-PDF support.
+- **Focus:** Built the complete responsive frontend (`src/frontend/`) by hand using HTML5, CSS3, JavaScript (ES6+), and Bootstrap 5 via CDN. Implemented Customer, Courier, and Admin portals.
 - **Key Challenges:** Ensuring rich mock data renders immediately while allowing seamless backend connectivity and responsive mobile layouts.
 - **Resolution:** Authored decoupled `mockData.js` and `app.js` with comprehensive state management and connected Flask root routing (`/`) directly to `src/frontend/index.html`. Verified 100% test pass rate and asset retrieval.
+
+### 2026-10-06 10:05 IST — Entry 8: Frontend Production Replacement & Deployment Hardening
+- **Focus:** Deleted `mockData.js` and purged all fake data (fake totals, spending, GPS simulation, chat widget, mock notifications). Removed client-side role switcher tabs. Wired all UI views directly to authentic backend REST APIs.
+- **Key Challenges:** Enforcing strict client-side DOM XSS sanitization while supporting full customer, courier, and admin operations.
+- **Resolution:** Implemented pure DOM `textContent` rendering for all server and user data. Authentication check on startup (`GET /api/auth/me`) directs unauthenticated users to Login/Register and unhides only the dashboard corresponding to the server-verified role. Added `gunicorn` to `requirements.txt`, made Flask auto-create SQLite tables on startup if missing, and auto-seed admin and courier accounts from environment variables (`ADMIN_PASSWORD`, `DELIVERY_PASSWORD`). Authored `tests/test_e2e_frontend_api.py` covering the complete end-to-end user lifecycle. Verified 100% pass rate (19/19 tests) across all 5 test modules.
 
 ---
 
 ## 6. Testing, Security Verification & Deployment Record
 
 ### 6.1 Testing & Security Verification Strategy
-- **Unit & Security Test Suite:** 100% passing automated test suite (16 tests across 4 test modules, 0 failures):
+- **Unit & Security Test Suite:** 100% passing automated test suite (19 tests across 5 test modules, 0 failures):
   - Customer shipment isolation, input validation, and BOLA prevention (`tests/test_customer_shipments.py`)
   - Cryptographic chain of custody, database tampering detection, security event logging, and admin telemetry (`tests/test_security_foundation.py`)
   - Delivery person lifecycle transitions, terminal state protection, courier assignment, and admin operations (`tests/test_delivery_and_admin.py`)
   - Live GPS coordinate ingestion, single-use token burn, replay attack prevention, and expiration controls (`tests/test_gps_and_ephemeral_token.py`)
-- **Frontend Verification:** Validated asset serving (`GET /`, `GET /css/styles.css`, `GET /js/app.js`, `GET /js/mockData.js`) with 100% HTTP 200 responses.
-- **Security Check:** Zero hardcoded credentials, parameterized queries on all endpoints, anti-enumeration generic auth responses, rate limit lockouts, and HttpOnly/SameSite cookies.
+  - End-to-end frontend authentication, shipment creation, lifecycle progression, 1-time token burn, and asset serving (`tests/test_e2e_frontend_api.py`)
+- **Frontend Verification:** Validated asset serving (`GET /`, `GET /css/styles.css`, `GET /js/app.js` return 200; `GET /js/mockData.js` returns 404).
+- **Security Check:** Zero hardcoded credentials, zero localStorage token/password storage, strict textContent DOM assignment, parameterized SQL on all endpoints, anti-enumeration generic auth responses, rate limit lockouts, and HttpOnly/SameSite cookies.
 
 ### 6.2 Deployment Verification
 - **Target Platform:** Cloud Deployment (e.g. Render / Railway / PythonAnywhere)
