@@ -833,7 +833,7 @@ Agent Response Summary:
 Communicated the exact login usernames and emails for both Admin and Delivery Courier accounts without exposing passwords. Updated Flask application startup in src/backend/app.py to guarantee database initialization and auto-creation of both accounts from ADMIN_PASSWORD and DELIVERY_PASSWORD environment variables when deployed without shell access. Verified with automated test suite (20/20 tests passing).
 
 Commit SHA:
-PENDING_COMMIT_SHA
+20bd0c1ede826993955d787808454982778e334f
 
 Files Modified / Created:
 * deployment/README.md (Modified)
